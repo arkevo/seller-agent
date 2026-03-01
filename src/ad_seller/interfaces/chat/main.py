@@ -249,6 +249,8 @@ class ChatInterface:
 
         if self._is_deal_request(message_lower):
             response = self._handle_deal_request(message, context)
+        elif self._is_counter_offer(message_lower):
+            response = self._handle_counter_offer(message, context)
         elif self._is_pricing_inquiry(message_lower):
             response = self._handle_pricing_inquiry(message, context)
         elif self._is_availability_inquiry(message_lower):
@@ -314,6 +316,14 @@ class ChatInterface:
                 deal_id = response.get("deal", {}).get("deal_id") if response.get("deal") else None
                 if deal_id:
                     self._current_session.negotiation.active_deal_ids.append(deal_id)
+            elif resp_type == "negotiation":
+                self._current_session.negotiation.stage = "negotiation"
+                self._current_session.negotiation.last_intent = "counter_offer"
+                neg_data = response.get("negotiation")
+                if neg_data:
+                    self._current_session.negotiation.negotiation_id = neg_data.get("negotiation_id")
+                    self._current_session.negotiation.counter_round = neg_data.get("round_number", 0)
+                    self._current_session.negotiation.last_counter_result = neg_data
 
             await self._save_session(self._current_session)
 
@@ -340,6 +350,15 @@ class ChatInterface:
         pricing_keywords = ["price", "cost", "cpm", "rate", "how much"]
         return any(keyword in message for keyword in pricing_keywords)
 
+    def _is_counter_offer(self, message: str) -> bool:
+        """Check if message is a counter-offer or negotiation attempt."""
+        counter_keywords = [
+            "counter", "lower", "negotiate", "how about",
+            "would you accept", "can you do", "what about",
+            "best price", "too high", "too expensive",
+        ]
+        return any(keyword in message for keyword in counter_keywords)
+
     def _is_availability_inquiry(self, message: str) -> bool:
         """Check if message is an availability inquiry."""
         avail_keywords = ["available", "inventory", "impressions", "capacity"]
@@ -363,6 +382,146 @@ class ChatInterface:
             "deal": result.get("deal"),
             "status": result["status"],
         }
+
+    def _handle_counter_offer(
+        self,
+        message: str,
+        context: BuyerContext,
+    ) -> dict[str, Any]:
+        """Handle a counter-offer or negotiation request."""
+        buyer_price = self._extract_price(message)
+
+        if buyer_price is None:
+            return {
+                "text": (
+                    "I'd be happy to negotiate! "
+                    "Please include the price you'd like to offer "
+                    "(e.g., \"How about $25 CPM?\")."
+                ),
+                "type": "negotiation",
+            }
+
+        # Use NegotiationEngine
+        from ...engines.negotiation_engine import NegotiationEngine
+        from ...engines.pricing_rules_engine import PricingRulesEngine
+        from ...engines.yield_optimizer import YieldOptimizer
+        from ...models.pricing_tiers import TieredPricingConfig
+
+        config = TieredPricingConfig(seller_organization_id="default")
+        pricing_engine = PricingRulesEngine(config)
+        yield_opt = YieldOptimizer()
+        neg_engine = NegotiationEngine(pricing_engine, yield_opt)
+
+        # Try to resume existing negotiation from session
+        history = None
+        if (
+            self._current_session
+            and self._current_session.negotiation.negotiation_id
+            and self._storage
+        ):
+            import asyncio
+            try:
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    # We're in a sync context called from process_message
+                    # Use the cached last_counter_result to reconstruct
+                    pass
+            except RuntimeError:
+                pass
+
+        # Start a new negotiation if none active
+        if history is None:
+            # Use the first discussed product, or a default
+            product_ids = (
+                self._current_session.negotiation.product_ids_discussed
+                if self._current_session
+                else []
+            )
+            product_id = product_ids[0] if product_ids else "display"
+
+            # Get product price info
+            product = self._products.get(product_id)
+            base_price = getattr(product, "base_cpm", 35.0) if product else 35.0
+            floor_price = getattr(product, "floor_cpm", 10.0) if product else 10.0
+
+            history = neg_engine.start_negotiation(
+                proposal_id=f"chat-{id(self)}",
+                product_id=product_id,
+                buyer_context=context,
+                base_price=base_price,
+                floor_price=floor_price,
+            )
+
+        round_result = neg_engine.evaluate_buyer_offer(history, buyer_price, context)
+        history = neg_engine.record_round(history, round_result)
+
+        text = self._format_negotiation_response(round_result, history)
+
+        return {
+            "text": text,
+            "type": "negotiation",
+            "negotiation": {
+                "negotiation_id": history.negotiation_id,
+                "round_number": round_result.round_number,
+                "action": round_result.action.value,
+                "buyer_price": round_result.buyer_price,
+                "seller_price": round_result.seller_price,
+                "status": history.status,
+            },
+        }
+
+    @staticmethod
+    def _extract_price(message: str) -> Optional[float]:
+        """Extract a dollar price from a message string."""
+        import re
+        # Match patterns like "$25", "$25.50", "25 CPM", "25.50 cpm"
+        patterns = [
+            r'\$(\d+(?:\.\d+)?)',           # $25 or $25.50
+            r'(\d+(?:\.\d+)?)\s*(?:cpm|CPM)',  # 25 CPM
+            r'(\d+(?:\.\d+)?)\s*(?:dollars?)',  # 25 dollars
+        ]
+        for pattern in patterns:
+            match = re.search(pattern, message)
+            if match:
+                return float(match.group(1))
+        return None
+
+    @staticmethod
+    def _format_negotiation_response(
+        round_result: Any,
+        history: Any,
+    ) -> str:
+        """Format a negotiation round result as human-readable text."""
+        from ...models.negotiation import NegotiationAction
+
+        action = round_result.action
+        if action == NegotiationAction.ACCEPT:
+            return (
+                f"**Deal!** We accept your offer of **${round_result.buyer_price:.2f} CPM**.\n\n"
+                f"Would you like me to generate a Deal ID for DSP activation?"
+            )
+        elif action == NegotiationAction.REJECT:
+            return (
+                f"I'm sorry, but we can't go that low. "
+                f"{round_result.rationale}\n\n"
+                f"Our floor for this inventory is **${history.floor_price:.2f} CPM**. "
+                f"Would you like to explore other packages that might fit your budget?"
+            )
+        elif action == NegotiationAction.FINAL_OFFER:
+            return (
+                f"Here's our **best and final offer**: **${round_result.seller_price:.2f} CPM**.\n\n"
+                f"{round_result.rationale}\n\n"
+                f"This is the lowest we can go. Would you like to accept?"
+            )
+        else:
+            # COUNTER
+            rounds_left = history.limits.max_rounds - round_result.round_number
+            return (
+                f"We appreciate your offer of ${round_result.buyer_price:.2f} CPM. "
+                f"How about **${round_result.seller_price:.2f} CPM**?\n\n"
+                f"{round_result.rationale}\n\n"
+                f"{'We have room for further discussion.' if rounds_left > 1 else 'This is close to our limit.'}"
+            )
 
     def _handle_pricing_inquiry(
         self,

@@ -191,3 +191,13 @@ class StorageBackend(ABC):
     async def set_media_kit(self, seller_org_id: str, data: dict) -> None:
         """Store media kit metadata for a seller organization."""
         await self.set(f"media_kit:{seller_org_id}", data)
+
+    # Negotiation operations
+
+    async def get_negotiation(self, proposal_id: str) -> Optional[dict]:
+        """Get negotiation history by proposal ID."""
+        return await self.get(f"negotiation:{proposal_id}")
+
+    async def set_negotiation(self, proposal_id: str, data: dict) -> None:
+        """Store negotiation history."""
+        await self.set(f"negotiation:{proposal_id}", data)

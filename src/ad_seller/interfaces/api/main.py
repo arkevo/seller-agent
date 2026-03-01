@@ -135,6 +135,15 @@ class MediaKitSearchRequest(BaseModel):
     advertiser_id: Optional[str] = None
 
 
+class CounterOfferRequest(BaseModel):
+    """Request to submit a counter-offer in a negotiation."""
+
+    buyer_price: float
+    buyer_tier: str = "public"
+    agency_id: Optional[str] = None
+    advertiser_id: Optional[str] = None
+
+
 # =============================================================================
 # Endpoints
 # =============================================================================
@@ -752,6 +761,154 @@ async def close_session_endpoint(session_id: str):
     await chat.close_session(session_id)
 
     return {"session_id": session_id, "status": "closed"}
+
+
+# =============================================================================
+# Negotiation Endpoints
+# =============================================================================
+
+
+@app.post("/proposals/{proposal_id}/counter")
+async def counter_proposal(proposal_id: str, request: CounterOfferRequest):
+    """Submit a counter-offer in an ongoing negotiation.
+
+    Loads or creates a NegotiationHistory, evaluates the buyer's offer,
+    persists the updated history, and emits a NEGOTIATION_ROUND event.
+    """
+    from ...engines.negotiation_engine import NegotiationEngine
+    from ...engines.pricing_rules_engine import PricingRulesEngine
+    from ...engines.yield_optimizer import YieldOptimizer
+    from ...events.helpers import emit_event
+    from ...events.models import EventType
+    from ...models.negotiation import NegotiationHistory
+    from ...models.pricing_tiers import TieredPricingConfig
+    from ...storage.factory import get_storage
+
+    storage = await get_storage()
+    config = TieredPricingConfig(seller_organization_id="default")
+    pricing_engine = PricingRulesEngine(config)
+    yield_opt = YieldOptimizer()
+    neg_engine = NegotiationEngine(pricing_engine, yield_opt)
+
+    buyer_context = _build_buyer_context(
+        request.buyer_tier, request.agency_id, request.advertiser_id
+    )
+
+    # Load existing negotiation or start new one
+    existing = await storage.get_negotiation(proposal_id)
+    if existing:
+        history = NegotiationHistory(**existing)
+        if history.status != "active":
+            raise HTTPException(
+                status_code=400,
+                detail=f"Negotiation is {history.status}, cannot counter",
+            )
+    else:
+        # Look up proposal to get product info
+        proposal_data = await storage.get_proposal(proposal_id)
+        if not proposal_data:
+            raise HTTPException(status_code=404, detail="Proposal not found")
+
+        product_id = proposal_data.get("product_id", "")
+        product_data = await storage.get_product(product_id)
+        if not product_data:
+            raise HTTPException(status_code=404, detail="Product not found")
+
+        history = neg_engine.start_negotiation(
+            proposal_id=proposal_id,
+            product_id=product_id,
+            buyer_context=buyer_context,
+            base_price=product_data.get("base_cpm", 0),
+            floor_price=product_data.get("floor_cpm", 0),
+        )
+
+        await emit_event(
+            event_type=EventType.NEGOTIATION_STARTED,
+            proposal_id=proposal_id,
+            payload={
+                "negotiation_id": history.negotiation_id,
+                "strategy": history.strategy.value,
+                "base_price": history.base_price,
+            },
+        )
+
+    # Evaluate buyer's offer
+    round_result = neg_engine.evaluate_buyer_offer(
+        history, request.buyer_price, buyer_context
+    )
+    history = neg_engine.record_round(history, round_result)
+
+    # Persist
+    await storage.set_negotiation(proposal_id, history.model_dump(mode="json"))
+
+    # Emit round event
+    await emit_event(
+        event_type=EventType.NEGOTIATION_ROUND,
+        proposal_id=proposal_id,
+        payload={
+            "negotiation_id": history.negotiation_id,
+            "round_number": round_result.round_number,
+            "action": round_result.action.value,
+            "buyer_price": round_result.buyer_price,
+            "seller_price": round_result.seller_price,
+        },
+    )
+
+    # Emit concluded event if terminal
+    if history.status in ("accepted", "rejected"):
+        await emit_event(
+            event_type=EventType.NEGOTIATION_CONCLUDED,
+            proposal_id=proposal_id,
+            payload={
+                "negotiation_id": history.negotiation_id,
+                "status": history.status,
+                "total_rounds": len(history.rounds),
+                "final_price": round_result.seller_price,
+            },
+        )
+
+    return {
+        "negotiation_id": history.negotiation_id,
+        "round_number": round_result.round_number,
+        "action": round_result.action.value,
+        "buyer_price": round_result.buyer_price,
+        "seller_price": round_result.seller_price,
+        "concession_pct": round_result.concession_pct,
+        "cumulative_concession_pct": round_result.cumulative_concession_pct,
+        "rationale": round_result.rationale,
+        "status": history.status,
+        "rounds_remaining": history.limits.max_rounds - round_result.round_number,
+    }
+
+
+@app.get("/proposals/{proposal_id}/negotiation")
+async def get_negotiation_status(proposal_id: str):
+    """Get full negotiation history for a proposal."""
+    from ...models.negotiation import NegotiationHistory
+    from ...storage.factory import get_storage
+
+    storage = await get_storage()
+    data = await storage.get_negotiation(proposal_id)
+    if not data:
+        raise HTTPException(status_code=404, detail="No negotiation found for this proposal")
+
+    history = NegotiationHistory(**data)
+    return {
+        "negotiation_id": history.negotiation_id,
+        "proposal_id": history.proposal_id,
+        "product_id": history.product_id,
+        "buyer_tier": history.buyer_tier.value,
+        "strategy": history.strategy.value,
+        "base_price": history.base_price,
+        "floor_price": history.floor_price,
+        "status": history.status,
+        "total_rounds": len(history.rounds),
+        "max_rounds": history.limits.max_rounds,
+        "rounds": [r.model_dump(mode="json") for r in history.rounds],
+        "started_at": history.started_at.isoformat(),
+        "completed_at": history.completed_at.isoformat() if history.completed_at else None,
+        "package_id": history.package_id,
+    }
 
 
 # =============================================================================

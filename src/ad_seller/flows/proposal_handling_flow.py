@@ -347,7 +347,7 @@ class ProposalHandlingFlow(Flow[ProposalState]):
 
     @listen(run_crew_evaluation)
     async def generate_counter_terms(self) -> None:
-        """Generate counter terms if recommending counter."""
+        """Generate counter terms using NegotiationEngine."""
         if self.state.recommendation != "counter":
             return
 
@@ -360,12 +360,39 @@ class ProposalHandlingFlow(Flow[ProposalState]):
         if not product:
             return
 
-        # Generate counter proposal
+        # Use NegotiationEngine for strategy-aware counter
+        from ..engines.negotiation_engine import NegotiationEngine
+        from ..engines.pricing_rules_engine import PricingRulesEngine
+        from ..engines.yield_optimizer import YieldOptimizer
+        from ..models.pricing_tiers import TieredPricingConfig
+
+        pricing_config = TieredPricingConfig(seller_organization_id="default")
+        pricing_engine = PricingRulesEngine(pricing_config)
+        yield_opt = YieldOptimizer()
+        neg_engine = NegotiationEngine(pricing_engine, yield_opt)
+
+        history = neg_engine.start_negotiation(
+            proposal_id=self.state.proposal_id,
+            product_id=product.product_id,
+            buyer_context=self.state.buyer_context,
+            base_price=product.base_cpm,
+            floor_price=product.floor_cpm,
+        )
+
+        buyer_price = self.state.proposal_data.get("price", 0)
+        round_result = neg_engine.evaluate_buyer_offer(
+            history, buyer_price, self.state.buyer_context
+        )
+        history = neg_engine.record_round(history, round_result)
+
         self.state.counter_terms = {
-            "proposed_price": product.base_cpm,
+            "proposed_price": round_result.seller_price,
             "floor_price": product.floor_cpm,
             "max_impressions": self.state.evaluation.available_impressions,
-            "reason": "Price below minimum acceptable threshold",
+            "reason": round_result.rationale,
+            "negotiation_id": history.negotiation_id,
+            "round_number": round_result.round_number,
+            "action": round_result.action.value,
         }
 
         self.state.status = ExecutionStatus.COUNTER_PENDING

@@ -50,6 +50,8 @@ class NegotiationState(BaseModel):
     active_deal_ids: list[str] = Field(default_factory=list)
     counter_round: int = 0
     last_intent: Optional[str] = None
+    negotiation_id: Optional[str] = None  # Active NegotiationHistory ID
+    last_counter_result: Optional[dict[str, Any]] = None  # Last NegotiationRound as dict
 
 
 class Session(BaseModel):

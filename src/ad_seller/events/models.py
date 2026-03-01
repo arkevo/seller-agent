@@ -45,6 +45,11 @@ class EventType(str, Enum):
     PACKAGE_UPDATED = "package.updated"
     PACKAGE_SYNCED = "package.synced"
 
+    # Negotiation lifecycle
+    NEGOTIATION_STARTED = "negotiation.started"
+    NEGOTIATION_ROUND = "negotiation.round"
+    NEGOTIATION_CONCLUDED = "negotiation.concluded"
+
 
 class Event(BaseModel):
     """An event emitted by the system."""
