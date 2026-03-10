@@ -2075,6 +2075,74 @@ async def list_orders(
     return {"orders": orders, "count": len(orders)}
 
 
+@app.get("/api/v1/orders/report")
+async def get_orders_report(
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+    _auth: None = Depends(_get_optional_api_key_record),
+):
+    """Summary report across all orders.
+
+    Returns counts by status, transition frequency by actor type,
+    and average time-in-state metrics.
+    """
+    from ...storage.factory import get_storage
+
+    storage = await get_storage()
+    all_orders = await storage.list_orders()
+
+    # Filter by date range if specified
+    if from_date or to_date:
+        filtered_orders = []
+        for o in all_orders:
+            created = o.get("created_at", "")
+            if from_date and created < from_date:
+                continue
+            if to_date and created > to_date + "T23:59:59":
+                continue
+            filtered_orders.append(o)
+        all_orders = filtered_orders
+
+    # Counts by status
+    status_counts: dict[str, int] = {}
+    for o in all_orders:
+        s = o.get("status", "unknown")
+        status_counts[s] = status_counts.get(s, 0) + 1
+
+    # Transition frequency by actor type
+    actor_counts: dict[str, int] = {}
+    total_transitions = 0
+    for o in all_orders:
+        transitions = o.get("audit_log", {}).get("transitions", [])
+        total_transitions += len(transitions)
+        for t in transitions:
+            actor_type = t.get("actor", "system").split(":")[0]
+            actor_counts[actor_type] = actor_counts.get(actor_type, 0) + 1
+
+    # Average transitions per order
+    order_count = len(all_orders)
+    avg_transitions = round(total_transitions / order_count, 1) if order_count else 0
+
+    # Change request summary
+    all_crs = await storage.list_change_requests()
+    cr_status_counts: dict[str, int] = {}
+    for cr in all_crs:
+        s = cr.get("status", "unknown")
+        cr_status_counts[s] = cr_status_counts.get(s, 0) + 1
+
+    return {
+        "total_orders": order_count,
+        "status_counts": status_counts,
+        "total_transitions": total_transitions,
+        "avg_transitions_per_order": avg_transitions,
+        "actor_type_counts": actor_counts,
+        "change_requests": {
+            "total": len(all_crs),
+            "by_status": cr_status_counts,
+        },
+    }
+
+
 @app.get("/api/v1/orders/{order_id}")
 async def get_order(
     order_id: str,
@@ -2476,3 +2544,64 @@ async def apply_change_request(
         "status": "applied",
         "order_id": order_id,
     }
+
+
+# =============================================================================
+# Order Audit & Reporting endpoints (seller-5ks)
+# =============================================================================
+
+
+@app.get("/api/v1/orders/{order_id}/audit")
+async def get_order_audit(
+    order_id: str,
+    actor: Optional[str] = None,
+    from_date: Optional[str] = None,
+    to_date: Optional[str] = None,
+    _auth: None = Depends(_get_optional_api_key_record),
+):
+    """Detailed audit log for an order with optional filters.
+
+    Filters:
+      - actor: filter transitions by actor (exact or prefix match)
+      - from_date: ISO date, only transitions on or after this date
+      - to_date: ISO date, only transitions on or before this date
+    """
+    from ...storage.factory import get_storage
+
+    storage = await get_storage()
+    order = await storage.get_order(order_id)
+
+    if not order:
+        raise HTTPException(
+            status_code=404,
+            detail={"error": "order_not_found", "message": f"Order '{order_id}' not found."},
+        )
+
+    transitions = order.get("audit_log", {}).get("transitions", [])
+
+    # Also include change requests for this order
+    change_requests = await storage.list_change_requests({"order_id": order_id})
+
+    # Filter transitions
+    filtered = []
+    for t in transitions:
+        if actor and not t.get("actor", "").startswith(actor):
+            continue
+        ts = t.get("timestamp", "")
+        if from_date and ts < from_date:
+            continue
+        if to_date and ts > to_date + "T23:59:59":
+            continue
+        filtered.append(t)
+
+    return {
+        "order_id": order_id,
+        "current_status": order.get("status"),
+        "created_at": order.get("created_at"),
+        "transitions": filtered,
+        "transition_count": len(filtered),
+        "change_requests": change_requests,
+        "change_request_count": len(change_requests),
+    }
+
+
