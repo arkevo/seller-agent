@@ -6,9 +6,10 @@ Step-by-step guide for publishers deploying the IAB Tech Lab Seller Agent.
 
 1. [Configuration & Environment](configuration.md) -- Set env vars, connect your ad server
 2. [Inventory Sync](inventory-sync.md) -- Connect GAM/FreeWheel, sync your inventory
-3. [Pricing & Access Tiers](pricing-rules.md) -- Configure buyer pricing tiers, discounts, negotiation limits
-4. [Approval & Human-in-the-Loop](approval-rules.md) -- Set up approval gates for deals
-5. [Buyer & Agent Management](agent-management.md) -- Manage API keys, agent trust, buyer access
+3. [Media Kit](media-kit.md) -- Set up your inventory catalog with packages, tiers, and featured items
+4. [Pricing & Access Tiers](pricing-rules.md) -- Configure buyer pricing tiers, discounts, negotiation limits
+5. [Approval & Human-in-the-Loop](approval-rules.md) -- Set up approval gates for deals
+6. [Buyer & Agent Management](agent-management.md) -- Manage API keys, agent trust, buyer access
 
 ## Current Status
 
