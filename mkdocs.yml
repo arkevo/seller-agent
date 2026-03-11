@@ -84,4 +84,5 @@ nav:
       - Pricing & Access Tiers: guides/pricing-rules.md
       - Approval & HITL: guides/approval-rules.md
       - Buyer & Agent Management: guides/agent-management.md
+      - Deployment: guides/deployment.md
   - "Buyer Agent Docs →": https://iabtechlab.github.io/buyer-agent/

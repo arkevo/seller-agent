@@ -43,7 +43,9 @@ class Settings(BaseSettings):
     # Database / Storage Configuration
     database_url: str = "sqlite:///./ad_seller.db"
     redis_url: Optional[str] = None
-    storage_type: str = "sqlite"  # sqlite, redis
+    storage_type: str = "sqlite"  # sqlite, redis, hybrid
+    postgres_pool_min: int = 2
+    postgres_pool_max: int = 10
 
     # CrewAI Configuration
     crew_memory_enabled: bool = True

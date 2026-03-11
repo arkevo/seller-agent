@@ -93,9 +93,16 @@ For the full list of supported providers, see the [litellm documentation](https:
 
 | Variable | Type | Default | Description |
 |----------|------|---------|-------------|
-| `DATABASE_URL` | `str` | `"sqlite:///./ad_seller.db"` | Database connection URL |
-| `REDIS_URL` | `str` | `None` | Redis URL (when `STORAGE_TYPE=redis`) |
-| `STORAGE_TYPE` | `str` | `"sqlite"` | Storage backend: `sqlite` or `redis` |
+| `DATABASE_URL` | `str` | `"sqlite:///./ad_seller.db"` | Database connection URL (SQLite or PostgreSQL) |
+| `REDIS_URL` | `str` | `None` | Redis URL (for `redis` or `hybrid` storage) |
+| `STORAGE_TYPE` | `str` | `"sqlite"` | Storage backend: `sqlite`, `redis`, or `hybrid` |
+| `POSTGRES_POOL_MIN` | `int` | `2` | Minimum PostgreSQL connection pool size |
+| `POSTGRES_POOL_MAX` | `int` | `10` | Maximum PostgreSQL connection pool size |
+
+!!! tip "Hybrid Storage (Recommended for Production)"
+    Set `STORAGE_TYPE=hybrid` with both `DATABASE_URL` (PostgreSQL) and `REDIS_URL` to route
+    business data (products, deals, orders) to PostgreSQL and sessions/cache to Redis.
+    See [Deployment](deployment.md) for details.
 
 ## Pricing Configuration
 
@@ -207,9 +214,12 @@ LLM_MAX_TOKENS=4096
 # =============================================================================
 # Storage
 # =============================================================================
-STORAGE_TYPE=sqlite
+STORAGE_TYPE=sqlite                                    # sqlite, redis, hybrid
 DATABASE_URL=sqlite:///./ad_seller.db
-# REDIS_URL=redis://localhost:6379/0  # For production, use Redis
+# DATABASE_URL=postgresql+asyncpg://seller:seller@localhost:5432/ad_seller  # For Postgres/hybrid
+# REDIS_URL=redis://localhost:6379/0                   # For redis or hybrid mode
+# POSTGRES_POOL_MIN=2
+# POSTGRES_POOL_MAX=10
 
 # =============================================================================
 # Pricing

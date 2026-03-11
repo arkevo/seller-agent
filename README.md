@@ -124,8 +124,10 @@ GAM_NETWORK_CODE=12345678
 GAM_JSON_KEY_PATH=/path/to/service-account.json
 
 # Storage
-STORAGE_TYPE=sqlite                          # or redis
+STORAGE_TYPE=sqlite                          # sqlite, redis, or hybrid
 DATABASE_URL=sqlite:///./ad_seller.db
+# DATABASE_URL=postgresql+asyncpg://seller:seller@localhost:5432/ad_seller
+# REDIS_URL=redis://localhost:6379/0         # Required for hybrid mode
 ```
 
 > **LLM Provider Flexibility:** The agent uses [litellm](https://docs.litellm.ai/) under the hood, supporting 100+ LLM providers (OpenAI, Azure, Cohere, Ollama, Vertex AI, Bedrock, etc.). Set `DEFAULT_LLM_MODEL` and `MANAGER_LLM_MODEL` using `provider/model-name` format and provide the matching API key. See the [Configuration Guide](https://iabtechlab.github.io/seller-agent/guides/configuration/) for details.
@@ -152,6 +154,17 @@ curl http://localhost:8001/.well-known/agent.json
 ```
 
 → [Quickstart Guide](https://iabtechlab.github.io/seller-agent/getting-started/quickstart/)
+
+### Docker
+
+Run the full stack (app + PostgreSQL + Redis) with Docker Compose:
+
+```bash
+cd infra/docker
+docker compose up
+```
+
+→ [Deployment Guide](https://iabtechlab.github.io/seller-agent/guides/deployment/)
 
 ## Publisher Setup
 

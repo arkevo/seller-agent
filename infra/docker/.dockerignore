@@ -1,0 +1,48 @@
+# Git
+.git
+.gitignore
+
+# Python
+__pycache__
+*.pyc
+*.pyo
+*.egg-info
+dist
+build
+.eggs
+
+# Virtual environments
+.venv
+venv
+env
+
+# IDE
+.vscode
+.idea
+*.swp
+*.swo
+
+# Testing / CI
+.pytest_cache
+.coverage
+htmlcov
+.mypy_cache
+.ruff_cache
+
+# Docs build
+site/
+
+# Environment files (secrets)
+.env
+.env.*
+
+# Database files (local dev)
+*.db
+*.sqlite3
+
+# Infrastructure (not needed in image)
+infra/
+
+# Misc
+*.md
+LICENSE
