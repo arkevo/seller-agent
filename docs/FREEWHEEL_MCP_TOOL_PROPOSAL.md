@@ -3,13 +3,13 @@
 **From:** IAB Tech Lab Seller Agent Team
 **To:** FreeWheel / Beeswax MCP Engineering
 **Date:** March 3, 2026
-**Re:** Dual-MCP integration architecture for NBCU pilot (Streaming Hub + Buyer Cloud)
+**Re:** Dual-MCP integration architecture for CTV/Linear publisher pilot (Streaming Hub + Buyer Cloud)
 
 ---
 
 ## Executive Summary
 
-The IAB Tech Lab Seller Agent manages the sell-side programmatic workflow for publishers. For the NBCU pilot, the seller agent will interact with FreeWheel through **two existing MCP servers**:
+The IAB Tech Lab Seller Agent manages the sell-side programmatic workflow for publishers. For the CTV/Linear publisher pilot, the seller agent will interact with FreeWheel through **two existing MCP servers**:
 
 | MCP Server | URL | Role | Tool Count |
 |---|---|---|---|
@@ -177,9 +177,9 @@ The Streaming Hub MCP (`shmcp.freewheel.com`) is the publisher-side ad server. T
 
 | SH Tool | Seller Agent Method | What We Use It For |
 |---|---|---|
-| `pub_1_0_list-sites` | `list_inventory()` | Get top-level inventory hierarchy (networks/sites) |
-| `pub_1_0_site-sections` | `list_inventory()` | Get child sections within a site |
-| `pub_1_0_listinventorypackages` | Media kit sync | Get pre-packaged inventory bundles |
+| `sh_1_0_list-sites` | `list_inventory()` | Get top-level inventory hierarchy (networks/sites) |
+| `sh_1_0_site-sections` | `list_inventory()` | Get child sections within a site |
+| `sh_1_0_listinventorypackages` | Media kit sync | Get pre-packaged inventory bundles |
 
 **Normalization:** SH site/section responses → `AdServerInventoryItem` (id, name, parent_id, status, sizes, ad_server_type="freewheel")
 
@@ -187,9 +187,9 @@ The Streaming Hub MCP (`shmcp.freewheel.com`) is the publisher-side ad server. T
 
 | SH Tool | Seller Agent Method | What We Use It For |
 |---|---|---|
-| `pub_1_0_list-audience-items` | `list_audience_segments()` | List available 1P/3P/ACR audience segments |
-| `pub_1_0_simplified-on-demand-forecastpostforecasts` | Availability check | Real-time avails for inventory + targeting + dates |
-| `pub_1_0_getdealnightlyforecast` | Deal health monitoring | Nightly forecast for active deals |
+| `sh_1_0_list-audience-items` | `list_audience_segments()` | List available 1P/3P/ACR audience segments |
+| `sh_1_0_simplified-on-demand-forecastpostforecasts` | Availability check | Real-time avails for inventory + targeting + dates |
+| `sh_1_0_getdealnightlyforecast` | Deal health monitoring | Nightly forecast for active deals |
 
 **Normalization:** SH audience items → `AdServerAudienceSegment` (id, name, description, size, status, ad_server_type="freewheel")
 
@@ -197,10 +197,10 @@ The Streaming Hub MCP (`shmcp.freewheel.com`) is the publisher-side ad server. T
 
 | SH Tool | Seller Agent Method | What We Use It For |
 |---|---|---|
-| `pub_1_1_create-an-insertion-order` | `create_order()` | Create IO for PG bookings |
-| `pub_1_1_get-a-insertion-order` | `get_order()` | Retrieve IO status |
-| `pub_1_1_book-an-insertion-order` | `approve_order()` | Commit budget, activate IO |
-| `pub_1_1_update-an-insertion-order` | — | Update IO dates/budget |
+| `sh_1_1_create-an-insertion-order` | `create_order()` | Create IO for PG bookings |
+| `sh_1_1_get-a-insertion-order` | `get_order()` | Retrieve IO status |
+| `sh_1_1_book-an-insertion-order` | `approve_order()` | Commit budget, activate IO |
+| `sh_1_1_update-an-insertion-order` | — | Update IO dates/budget |
 
 **Normalization:** SH IO responses → `AdServerOrder` (id, name, advertiser_id, status → OrderStatus enum, ad_server_type="freewheel")
 
@@ -221,10 +221,10 @@ FreeWheel splits what we call a "line item" into two entities: **Campaign** (con
 
 | SH Tool | Seller Agent Method | What We Use It For |
 |---|---|---|
-| `pub_1_1_create-a-campaign` | `create_line_item()` (step 1) | Create campaign container under IO |
-| `pub_1_1_create-a-placement` | `create_line_item()` (step 2) | Assign inventory + budget under campaign |
-| `pub_1_1_update-a-placement` | `update_line_item()` | Modify flight dates, targeting, pricing |
-| `pub_1_1_get-a-campaign` | — | Retrieve campaign details |
+| `sh_1_1_create-a-campaign` | `create_line_item()` (step 1) | Create campaign container under IO |
+| `sh_1_1_create-a-placement` | `create_line_item()` (step 2) | Assign inventory + budget under campaign |
+| `sh_1_1_update-a-placement` | `update_line_item()` | Modify flight dates, targeting, pricing |
+| `sh_1_1_get-a-campaign` | — | Retrieve campaign details |
 
 **Composite ID:** The seller agent stores `"campaign_id:placement_id"` as the line item ID to track both FreeWheel entities.
 
@@ -234,14 +234,14 @@ FreeWheel splits what we call a "line item" into two entities: **Campaign** (con
 
 | SH Tool | Seller Agent Method | What We Use It For |
 |---|---|---|
-| `pub_1_0_createdeal` | `create_deal()` (step 1) | Create deal with external deal_id, pricing, inventory |
-| `pub_1_0_activatedeal` | `create_deal()` (step 2) | Activate deal for bidding |
-| `pub_1_0_updatedeal` | `update_deal()` | Modify deal pricing/dates/targeting |
-| `pub_1_0_searchdeals` | — | Find existing deals |
+| `sh_1_0_createdeal` | `create_deal()` (step 1) | Create deal with external deal_id, pricing, inventory |
+| `sh_1_0_activatedeal` | `create_deal()` (step 2) | Activate deal for bidding |
+| `sh_1_0_updatedeal` | `update_deal()` | Modify deal pricing/dates/targeting |
+| `sh_1_0_searchdeals` | — | Find existing deals |
 
 **Deal creation flow (SH side):**
-1. `pub_1_0_createdeal` — creates deal with external `deal_id` (used in OpenRTB bid requests), pricing, inventory references, buyer seat IDs
-2. `pub_1_0_activatedeal` — transitions deal from draft → active, making it available in the exchange
+1. `sh_1_0_createdeal` — creates deal with external `deal_id` (used in OpenRTB bid requests), pricing, inventory references, buyer seat IDs
+2. `sh_1_0_activatedeal` — transitions deal from draft → active, making it available in the exchange
 
 **Normalization:** SH deal responses → `AdServerDeal` (id, deal_id, name, deal_type → DealType, floor_price_micros, fixed_price_micros, currency, buyer_seat_ids, status → DealStatus, ad_server_type="freewheel")
 
@@ -274,26 +274,26 @@ The Buyer Cloud MCP (`bcmcp.freewheel.com`) is the demand-side (Beeswax DSP). Th
 
 | BC Tool | Purpose | When Used |
 |---|---|---|
-| `v2_get_campaigns` | List campaigns | Verify BC-side campaign state |
-| `create_campaign` | Create BC campaign | PG booking (bind to SH deal) |
-| `v2_get_line_items` | List line items | Campaign delivery details |
-| `create_line_item` | Create BC line item | PG booking (budget/targeting) |
-| `v2_activate_campaign` | Activate campaign | PG booking final step |
+| `bc_v2_get_campaigns` | List campaigns | Verify BC-side campaign state |
+| `bc_v2_create_campaign` | Create BC campaign | PG booking (bind to SH deal) |
+| `bc_v2_get_line_items` | List line items | Campaign delivery details |
+| `bc_v2_create_line_item` | Create BC line item | PG booking (budget/targeting) |
+| `bc_v2_activate_campaign` | Activate campaign | PG booking final step |
 
 ### 2.3 Creative Management
 
 | BC Tool | Purpose | When Used |
 |---|---|---|
-| `v2_get_creatives` | List creatives | Verify creative status |
-| `create_creative` | Upload creative | Creative sync workflow |
-| `v2_attach_creative_to_line_item` | Associate creative | PG booking creative attachment |
+| `bc_v2_get_creatives` | List creatives | Verify creative status |
+| `bc_v2_create_creative` | Upload creative | Creative sync workflow |
+| `bc_v2_attach_creative_to_line_item` | Associate creative | PG booking creative attachment |
 
 ### 2.4 Reporting & Analytics
 
 | BC Tool | Purpose | When Used |
 |---|---|---|
-| `v2_get_reporting_impressions` | Impression delivery report | Campaign monitoring |
-| `v2_get_reporting_revenue` | Revenue report | Deal performance |
+| `bc_v2_get_reporting_impressions` | Impression delivery report | Campaign monitoring |
+| `bc_v2_get_reporting_revenue` | Revenue report | Deal performance |
 | `check_campaign_health` | Campaign health check | Proactive monitoring |
 | `deal_analyst` | Deal performance analysis | Deal optimization |
 
@@ -328,7 +328,7 @@ For every cross-MCP operation, the seller agent maintains a binding record:
 
 ```json
 {
-  "deal_id": "NBCU-A1B2C3D4E5F6",
+  "deal_id": "IAB-A1B2C3D4E5F6",
   "sh_io_id": "fw-io-789",
   "sh_campaign_id": "fw-camp-100",
   "sh_placement_id": "fw-plc-200",
@@ -360,9 +360,9 @@ This design ensures that **no deal is lost** due to a BC failure.
 
 ```
 Buyer Agent → Seller Agent.list_inventory()
-  └→ SH: pub_1_0_list-sites (get networks/sites)
-  └→ SH: pub_1_0_site-sections (get sections for each site)
-  └→ SH: pub_1_0_listinventorypackages (get pre-built packages)
+  └→ SH: sh_1_0_list-sites (get networks/sites)
+  └→ SH: sh_1_0_site-sections (get sections for each site)
+  └→ SH: sh_1_0_listinventorypackages (get pre-built packages)
   ←── Returns: AdServerInventoryItem[] (normalized)
       + Package[] (media kit)
 ```
@@ -373,7 +373,7 @@ Buyer Agent → Seller Agent.list_inventory()
 
 ```
 Buyer Agent → Seller Agent.check_avails(inventory_ids, dates, targeting)
-  └→ SH: pub_1_0_simplified-on-demand-forecastpostforecasts
+  └→ SH: sh_1_0_simplified-on-demand-forecastpostforecasts
   ←── Returns: available impressions, contended impressions, probability
 ```
 
@@ -386,14 +386,14 @@ For Preferred Deals and Private Auctions, the deal ID is created in Streaming Hu
 ```
 Negotiation accepted → DealGenerationFlow → ExecutionActivationFlow:
 
-  1. SH: pub_1_0_createdeal
+  1. SH: sh_1_0_createdeal
      - External deal_id (OpenRTB)
      - Deal type: "preferreddeal" or "privateauction"
      - Pricing: floor_price_micros (PA) or fixed_price_micros (PD)
      - Inventory references
      - Buyer seat IDs (wseat)
 
-  2. SH: pub_1_0_activatedeal
+  2. SH: sh_1_0_activatedeal
      - Transition deal to active status
 
   3. Return to buyer:
@@ -403,7 +403,7 @@ Negotiation accepted → DealGenerationFlow → ExecutionActivationFlow:
 Seller Agent Response (BookingResult):
   {
     "deal": {
-      "deal_id": "NBCU-A1B2C3D4E5F6",
+      "deal_id": "IAB-A1B2C3D4E5F6",
       "deal_type": "preferreddeal",
       "status": "active",
       "fixed_price_micros": 28000000,
@@ -411,7 +411,7 @@ Seller Agent Response (BookingResult):
       "buyer_seat_ids": ["ttd-seat-123"]
     },
     "openrtb_params": {
-      "id": "NBCU-A1B2C3D4E5F6",
+      "id": "IAB-A1B2C3D4E5F6",
       "bidfloor": 28.0,
       "bidfloorcur": "USD",
       "at": 3,
@@ -432,36 +432,36 @@ Negotiation accepted → ExecutionActivationFlow (IO path):
 
   ── Streaming Hub (deal + IO setup) ──────────────────────
 
-  1. SH: pub_1_1_create-a-campaign
+  1. SH: sh_1_1_create-a-campaign
      - Create advertiser container campaign
 
-  2. SH: pub_1_1_create-an-insertion-order
+  2. SH: sh_1_1_create-an-insertion-order
      - IO under campaign with budget, dates
 
-  3. SH: pub_1_1_create-a-placement
+  3. SH: sh_1_1_create-a-placement
      - Inventory assignment + delivery goal under IO
 
-  4. SH: pub_1_0_createdeal
+  4. SH: sh_1_0_createdeal
      - External deal_id linking to the IO/placement
 
-  5. SH: pub_1_1_book-an-insertion-order
+  5. SH: sh_1_1_book-an-insertion-order
      - Commit budget, activate IO
 
-  6. SH: pub_1_0_activatedeal
+  6. SH: sh_1_0_activatedeal
      - Make deal live in exchange
 
   ── Buyer Cloud (campaign execution binding) ─────────────
 
-  7. BC: create_campaign
+  7. BC: bc_v2_create_campaign
      - Create campaign referencing shared deal_id
 
-  8. BC: create_line_item
+  8. BC: bc_v2_create_line_item
      - Budget and targeting under BC campaign
 
-  9. BC: v2_attach_creative_to_line_item
+  9. BC: bc_v2_attach_creative_to_line_item
      - Associate creatives with BC line item
 
-  10. BC: v2_activate_campaign
+  10. BC: bc_v2_activate_campaign
       - Activate campaign for delivery
 
   ← Return: BookingResult + FWCrossMCPBinding
@@ -475,13 +475,13 @@ Negotiation accepted → ExecutionActivationFlow (IO path):
 Seller Agent monitoring:
 
   Publisher-side forecast:
-  └→ SH: pub_1_0_getdealnightlyforecast (deal delivery forecast)
+  └→ SH: sh_1_0_getdealnightlyforecast (deal delivery forecast)
 
   Demand-side performance:
-  └→ BC: v2_get_reporting_impressions (impression delivery)
-  └→ BC: v2_get_reporting_revenue (revenue metrics)
-  └→ BC: check_campaign_health (proactive health check)
-  └→ BC: deal_analyst (deal-level performance analysis)
+  └→ BC: bc_v2_get_reporting_impressions (impression delivery)
+  └→ BC: bc_v2_get_reporting_revenue (revenue metrics)
+  └→ BC: check_campaign_health (built-in analytics tool)
+  └→ BC: deal_analyst (built-in analytics tool)
 ```
 
 **MCP:** Both (SH for forecasting, BC for execution reporting)
@@ -496,16 +496,16 @@ This table shows every `AdServerClient` method and which MCP tool(s) the seller 
 |---|---|---|---|
 | `connect()` | Both | `streaming_hub_login` | OAuth 2.0 + `buyer_cloud_login` |
 | `disconnect()` | Both | `streaming_hub_logout` | `buyer_cloud_logout` |
-| `list_inventory()` | SH | `pub_1_0_list-sites` + `pub_1_0_site-sections` | — |
-| `list_audience_segments()` | SH | `pub_1_0_list-audience-items` | — |
-| `create_order()` | SH | `pub_1_1_create-an-insertion-order` | — |
-| `get_order()` | SH | `pub_1_1_get-a-insertion-order` | — |
-| `approve_order()` | SH | `pub_1_1_book-an-insertion-order` | — |
-| `create_line_item()` | SH | `pub_1_1_create-a-campaign` + `pub_1_1_create-a-placement` | — |
-| `update_line_item()` | SH | `pub_1_1_update-a-placement` | — |
-| `create_deal()` | SH | `pub_1_0_createdeal` + `pub_1_0_activatedeal` | — |
-| `update_deal()` | SH | `pub_1_0_updatedeal` | — |
-| `book_deal()` — PD/PA | SH | `pub_1_0_createdeal` → `pub_1_0_activatedeal` | — |
+| `list_inventory()` | SH | `sh_1_0_list-sites` + `sh_1_0_site-sections` | — |
+| `list_audience_segments()` | SH | `sh_1_0_list-audience-items` | — |
+| `create_order()` | SH | `sh_1_1_create-an-insertion-order` | — |
+| `get_order()` | SH | `sh_1_1_get-a-insertion-order` | — |
+| `approve_order()` | SH | `sh_1_1_book-an-insertion-order` | — |
+| `create_line_item()` | SH | `sh_1_1_create-a-campaign` + `sh_1_1_create-a-placement` | — |
+| `update_line_item()` | SH | `sh_1_1_update-a-placement` | — |
+| `create_deal()` | SH | `sh_1_0_createdeal` + `sh_1_0_activatedeal` | — |
+| `update_deal()` | SH | `sh_1_0_updatedeal` | — |
+| `book_deal()` — PD/PA | SH | `sh_1_0_createdeal` → `sh_1_0_activatedeal` | — |
 | `book_deal()` — PG | Both | IO + campaign + placement + deal + book (steps 1-6) | campaign + line item + creative + activate (steps 7-10) |
 
 ---
@@ -518,18 +518,18 @@ After mapping the seller agent's requirements to the existing ~380 tools across 
 
 | Capability | Status | Notes |
 |---|---|---|
-| **Create deal with external deal_id** | `pub_1_0_createdeal` exists | **Confirm:** Can we pass an external `deal_id` string (for OpenRTB `imp.pmp.deals[].id`) at creation time? |
-| **Deal buyer seat IDs** | Likely in `pub_1_0_createdeal` params | **Confirm:** Can we specify `buyer_seat_ids` (maps to OpenRTB `wseat`) at deal creation? |
-| **Deal activation** | `pub_1_0_activatedeal` exists | OK |
-| **Forecasting with audience targeting** | `pub_1_0_simplified-on-demand-forecastpostforecasts` exists | **Confirm:** Can we pass audience segment IDs into the forecast request? |
-| **Inventory package listing** | `pub_1_0_listinventorypackages` exists | **Confirm:** Response includes ad format, device type, content category metadata? |
+| **Create deal with external deal_id** | `sh_1_0_createdeal` exists | **Confirm:** Can we pass an external `deal_id` string (for OpenRTB `imp.pmp.deals[].id`) at creation time? |
+| **Deal buyer seat IDs** | Likely in `sh_1_0_createdeal` params | **Confirm:** Can we specify `buyer_seat_ids` (maps to OpenRTB `wseat`) at deal creation? |
+| **Deal activation** | `sh_1_0_activatedeal` exists | OK |
+| **Forecasting with audience targeting** | `sh_1_0_simplified-on-demand-forecastpostforecasts` exists | **Confirm:** Can we pass audience segment IDs into the forecast request? |
+| **Inventory package listing** | `sh_1_0_listinventorypackages` exists | **Confirm:** Response includes ad format, device type, content category metadata? |
 
 ### 6.2 Buyer Cloud — Needed But Possibly Missing
 
 | Capability | Status | Notes |
 |---|---|---|
 | **Link BC campaign to SH deal by deal_id** | Needs confirmation | **Critical:** How does a BC campaign reference a deal created in SH? Is `deal_id` a field on BC campaign/line item creation? |
-| **Creative approval status** | `v2_get_creatives` likely includes status | **Confirm:** Response includes review/approval status for PG creative pre-approval? |
+| **Creative approval status** | `bc_v2_get_creatives` likely includes status | **Confirm:** Response includes review/approval status for PG creative pre-approval? |
 | **Deal-level reporting** | `deal_analyst` tool exists | **Confirm:** Can we query by external `deal_id`? |
 
 ### 6.3 Cross-MCP — Key Questions for FreeWheel Engineering
@@ -540,13 +540,13 @@ After mapping the seller agent's requirements to the existing ~380 tools across 
 
 3. **Deal creation sequencing:** For PG deals, must the SH deal exist before the BC campaign is created? Or can they be created in parallel with binding after?
 
-4. **Inventory reference format:** When creating a deal in SH with `pub_1_0_createdeal`, what format are inventory references? Site IDs? Section IDs? Slot IDs?
+4. **Inventory reference format:** When creating a deal in SH with `sh_1_0_createdeal`, what format are inventory references? Site IDs? Section IDs? Slot IDs?
 
-5. **Price format in SH deals:** Does `pub_1_0_createdeal` accept prices in microcurrency (micro-USD), or does it use decimal dollars? The seller agent uses microcurrency internally.
+5. **Price format in SH deals:** Does `sh_1_0_createdeal` accept prices in microcurrency (micro-USD), or does it use decimal dollars? The seller agent uses microcurrency internally.
 
-6. **Real-time vs. batch activation:** After `pub_1_0_activatedeal`, how quickly is the deal available for bidding? Is there a propagation delay?
+6. **Real-time vs. batch activation:** After `sh_1_0_activatedeal`, how quickly is the deal available for bidding? Is there a propagation delay?
 
-7. **IO booking atomicity:** Does `pub_1_1_book-an-insertion-order` validate all placements before committing, or can it partially succeed?
+7. **IO booking atomicity:** Does `sh_1_1_book-an-insertion-order` validate all placements before committing, or can it partially succeed?
 
 ### 6.4 Enhancement Requests (Nice-to-Have)
 
@@ -594,7 +594,7 @@ For all programmatic deals, the seller agent generates OpenRTB 2.5-compatible pa
 
 ```json
 {
-  "id": "NBCU-A1B2C3D4E5F6",
+  "id": "IAB-A1B2C3D4E5F6",
   "bidfloor": 28.0,
   "bidfloorcur": "USD",
   "at": 3,
@@ -664,20 +664,20 @@ All MCP tools follow the JSON-RPC 2.0 error format:
 ### Phase 1 — Read-Only (Unblocks Inventory Discovery + Avails)
 
 The seller agent connects to **Streaming Hub only** and performs read operations:
-- `list_inventory()` via `pub_1_0_list-sites` + `pub_1_0_site-sections`
-- `list_audience_segments()` via `pub_1_0_list-audience-items`
-- Avails checking via `pub_1_0_simplified-on-demand-forecastpostforecasts`
-- Product/package discovery via `pub_1_0_listinventorypackages`
+- `list_inventory()` via `sh_1_0_list-sites` + `sh_1_0_site-sections`
+- `list_audience_segments()` via `sh_1_0_list-audience-items`
+- Avails checking via `sh_1_0_simplified-on-demand-forecastpostforecasts`
+- Product/package discovery via `sh_1_0_listinventorypackages`
 
 **Deliverable:** Seller agent can populate its media kit from FreeWheel inventory and respond to buyer avails queries.
 
 ### Phase 2 — PD/PA Deal Booking (Streaming Hub Only)
 
 The seller agent creates and activates deals:
-- `create_deal()` via `pub_1_0_createdeal` + `pub_1_0_activatedeal`
-- `update_deal()` via `pub_1_0_updatedeal`
-- IO management via `pub_1_1_create-an-insertion-order`, `pub_1_1_book-an-insertion-order`
-- Line items via `pub_1_1_create-a-campaign` + `pub_1_1_create-a-placement`
+- `create_deal()` via `sh_1_0_createdeal` + `sh_1_0_activatedeal`
+- `update_deal()` via `sh_1_0_updatedeal`
+- IO management via `sh_1_1_create-an-insertion-order`, `sh_1_1_book-an-insertion-order`
+- Line items via `sh_1_1_create-a-campaign` + `sh_1_1_create-a-placement`
 
 **Deliverable:** Full PD/PA deal lifecycle. Buyer gets deal_id to enter in any DSP.
 
@@ -686,8 +686,8 @@ The seller agent creates and activates deals:
 The seller agent connects to **both** MCPs for cross-MCP PG booking:
 - SH: Full IO + deal setup (steps 1-6 from UC4)
 - BC: Campaign creation and binding (steps 7-10 from UC4)
-- BC: Reporting via `v2_get_reporting_*`, `check_campaign_health`, `deal_analyst`
-- BC: Creative management via `create_creative`, `v2_attach_creative_to_line_item`
+- BC: Reporting via `bc_v2_get_reporting_*`, `check_campaign_health`, `deal_analyst`
+- BC: Creative management via `bc_v2_create_creative`, `bc_v2_attach_creative_to_line_item`
 
 **Deliverable:** Complete PG workflow with campaign execution and reporting.
 
@@ -701,22 +701,22 @@ The seller agent connects to **both** MCPs for cross-MCP PG booking:
 |---|---|---|---|
 | 1 | `streaming_hub_login` | Auth | Session establishment |
 | 2 | `streaming_hub_logout` | Auth | Session cleanup |
-| 3 | `pub_1_0_list-sites` | Inventory | List sites/networks |
-| 4 | `pub_1_0_site-sections` | Inventory | List sections within site |
-| 5 | `pub_1_0_listinventorypackages` | Inventory | List inventory packages |
-| 6 | `pub_1_0_list-audience-items` | Audience | List audience segments |
-| 7 | `pub_1_0_simplified-on-demand-forecastpostforecasts` | Forecasting | Avails/forecast |
-| 8 | `pub_1_0_getdealnightlyforecast` | Forecasting | Deal delivery forecast |
-| 9 | `pub_1_1_create-an-insertion-order` | IO | Create IO |
-| 10 | `pub_1_1_get-a-insertion-order` | IO | Get IO details |
-| 11 | `pub_1_1_book-an-insertion-order` | IO | Approve/book IO |
-| 12 | `pub_1_1_create-a-campaign` | Campaign | Create campaign container |
-| 13 | `pub_1_1_create-a-placement` | Placement | Create placement under campaign |
-| 14 | `pub_1_1_update-a-placement` | Placement | Update placement |
-| 15 | `pub_1_0_createdeal` | Deal | Create programmatic deal |
-| 16 | `pub_1_0_activatedeal` | Deal | Activate deal |
-| 17 | `pub_1_0_updatedeal` | Deal | Update deal |
-| 18 | `pub_1_0_searchdeals` | Deal | Search/list deals |
+| 3 | `sh_1_0_list-sites` | Inventory | List sites/networks |
+| 4 | `sh_1_0_site-sections` | Inventory | List sections within site |
+| 5 | `sh_1_0_listinventorypackages` | Inventory | List inventory packages |
+| 6 | `sh_1_0_list-audience-items` | Audience | List audience segments |
+| 7 | `sh_1_0_simplified-on-demand-forecastpostforecasts` | Forecasting | Avails/forecast |
+| 8 | `sh_1_0_getdealnightlyforecast` | Forecasting | Deal delivery forecast |
+| 9 | `sh_1_1_create-an-insertion-order` | IO | Create IO |
+| 10 | `sh_1_1_get-a-insertion-order` | IO | Get IO details |
+| 11 | `sh_1_1_book-an-insertion-order` | IO | Approve/book IO |
+| 12 | `sh_1_1_create-a-campaign` | Campaign | Create campaign container |
+| 13 | `sh_1_1_create-a-placement` | Placement | Create placement under campaign |
+| 14 | `sh_1_1_update-a-placement` | Placement | Update placement |
+| 15 | `sh_1_0_createdeal` | Deal | Create programmatic deal |
+| 16 | `sh_1_0_activatedeal` | Deal | Activate deal |
+| 17 | `sh_1_0_updatedeal` | Deal | Update deal |
+| 18 | `sh_1_0_searchdeals` | Deal | Search/list deals |
 
 ### Buyer Cloud Tools Used (~12 tools)
 
@@ -724,16 +724,16 @@ The seller agent connects to **both** MCPs for cross-MCP PG booking:
 |---|---|---|---|
 | 1 | `buyer_cloud_login` | Auth | Session establishment |
 | 2 | `buyer_cloud_logout` | Auth | Session cleanup |
-| 3 | `v2_get_campaigns` | Campaign | List campaigns |
-| 4 | `create_campaign` | Campaign | Create campaign (PG binding) |
-| 5 | `v2_activate_campaign` | Campaign | Activate campaign |
-| 6 | `v2_get_line_items` | Line Item | List line items |
-| 7 | `create_line_item` | Line Item | Create line item (PG binding) |
-| 8 | `v2_get_creatives` | Creative | List creatives |
-| 9 | `create_creative` | Creative | Upload creative |
-| 10 | `v2_attach_creative_to_line_item` | Creative | Associate creative |
-| 11 | `v2_get_reporting_impressions` | Reporting | Impression report |
-| 12 | `v2_get_reporting_revenue` | Reporting | Revenue report |
+| 3 | `bc_v2_get_campaigns` | Campaign | List campaigns |
+| 4 | `bc_v2_create_campaign` | Campaign | Create campaign (PG binding) |
+| 5 | `bc_v2_activate_campaign` | Campaign | Activate campaign |
+| 6 | `bc_v2_get_line_items` | Line Item | List line items |
+| 7 | `bc_v2_create_line_item` | Line Item | Create line item (PG binding) |
+| 8 | `bc_v2_get_creatives` | Creative | List creatives |
+| 9 | `bc_v2_create_creative` | Creative | Upload creative |
+| 10 | `bc_v2_attach_creative_to_line_item` | Creative | Associate creative |
+| 11 | `bc_v2_get_reporting_impressions` | Reporting | Impression report |
+| 12 | `bc_v2_get_reporting_revenue` | Reporting | Revenue report |
 | 13 | `check_campaign_health` | Reporting | Campaign health |
 | 14 | `deal_analyst` | Reporting | Deal analysis |
 
