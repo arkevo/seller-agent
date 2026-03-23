@@ -14,7 +14,7 @@ OUTPUT_PATH = BEADS_DIR / "PROGRESS.md"
 # Phase grouping by title prefix
 PHASE_MAP = {
     "1": ("Phase 1", "CTV/Linear Publisher Pilot"),
-    "2": ("Phase 2", "Negotiation & Order Lifecycle"),
+    "2": ("Phase 2", "Deal Lifecycle & SSP Integration"),
     "3": ("Phase 3", "Platform Features & Inventory Sync"),
     "4": ("Phase 4", "DealJockey — Seller API"),
 }
