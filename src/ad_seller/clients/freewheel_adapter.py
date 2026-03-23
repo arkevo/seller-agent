@@ -176,14 +176,28 @@ class FreeWheelAdServerClient(AdServerClient):
     ) -> list[AdServerInventoryItem]:
         """List inventory from FreeWheel Streaming Hub.
 
-        Calls Philippe's list_inventory() MCP tool which returns
-        "template deals" representing packages.
+        Behavior depends on FREEWHEEL_INVENTORY_MODE:
+        - "full": Calls list_inventory() to get all available inventory.
+        - "deals_only": Calls list_inventory() with a filter to return
+          only pre-configured deals/packages the publisher set up for
+          agentic selling. This is the default — publishers must opt-in
+          to expose their full inventory to the agent.
         """
+        settings = self._get_settings()
+        inventory_mode = settings.freewheel_inventory_mode
+
         args: dict[str, Any] = {}
         if limit:
             args["limit"] = limit
         if filter_str:
             args["filter"] = filter_str
+
+        if inventory_mode == "deals_only":
+            # Only return pre-configured template deals / packages
+            args["type"] = "template_deals"
+            logger.info("Inventory mode: deals_only — returning pre-configured deals only")
+        else:
+            logger.info("Inventory mode: full — returning all available inventory")
 
         raw = await self._sh_client.call_tool("list_inventory", args)
 

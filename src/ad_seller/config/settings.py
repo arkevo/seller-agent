@@ -80,6 +80,11 @@ class Settings(BaseSettings):
     freewheel_api_url: Optional[str] = None  # Legacy — use MCP URLs below
     freewheel_api_key: Optional[str] = None  # Legacy — use MCP auth below
     freewheel_network_id: Optional[str] = None  # Publisher network/account ID in FreeWheel
+    # Inventory access mode: controls what the agent can see
+    #   "full"       — agent calls list_inventory() and sees all available inventory
+    #   "deals_only" — agent only sees pre-configured deals the publisher set up
+    #                   for agentic selling in FreeWheel (template deals / packages)
+    freewheel_inventory_mode: str = "deals_only"  # full, deals_only
     # Streaming Hub MCP (publisher-side: inventory, deals, audiences)
     freewheel_sh_mcp_url: Optional[str] = None  # e.g. https://shmcp.freewheel.com
     freewheel_sh_username: Optional[str] = None  # TODO(freewheel-auth): confirm auth mechanism
