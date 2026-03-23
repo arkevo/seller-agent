@@ -39,6 +39,48 @@ from .freewheel_normalizer import (
 logger = logging.getLogger(__name__)
 
 
+# =============================================================================
+# Auth helpers (STUBS — real auth TBD with Philippe)
+# =============================================================================
+
+
+def _build_sh_auth_params(settings: Any) -> dict[str, str]:
+    """Build Streaming Hub auth params from settings.
+
+    TODO(freewheel-auth): Replace with real auth once Philippe confirms
+    the SH MCP auth mechanism (API key, username/password, OAuth, etc.)
+    """
+    params: dict[str, str] = {}
+    if settings.freewheel_sh_username:
+        params["username"] = settings.freewheel_sh_username
+    if settings.freewheel_sh_password:
+        params["password"] = settings.freewheel_sh_password
+    if getattr(settings, "freewheel_network_id", None):
+        params["network_id"] = settings.freewheel_network_id
+    return params
+
+
+def _build_bc_auth_params(settings: Any) -> dict[str, str]:
+    """Build Buyer Cloud auth params from settings.
+
+    TODO(freewheel-auth): Replace with real auth once Philippe confirms
+    the BC MCP auth mechanism. Likely OAuth 2.0 client_credentials +
+    session login (email/password/buzz_key).
+    """
+    params: dict[str, str] = {}
+    if settings.freewheel_bc_client_id:
+        params["client_id"] = settings.freewheel_bc_client_id
+    if settings.freewheel_bc_client_secret:
+        params["client_secret"] = settings.freewheel_bc_client_secret
+    if settings.freewheel_bc_email:
+        params["email"] = settings.freewheel_bc_email
+    if settings.freewheel_bc_password:
+        params["password"] = settings.freewheel_bc_password
+    if settings.freewheel_bc_buzz_key:
+        params["buzz_key"] = settings.freewheel_bc_buzz_key
+    return params
+
+
 class FreeWheelAdServerClient(AdServerClient):
     """AdServerClient implementation for FreeWheel (Streaming Hub + Buyer Cloud).
 
@@ -65,7 +107,21 @@ class FreeWheelAdServerClient(AdServerClient):
     # =========================================================================
 
     async def connect(self) -> None:
-        """Connect to FreeWheel Streaming Hub MCP (and BC if configured)."""
+        """Connect to FreeWheel Streaming Hub MCP (and BC if configured).
+
+        Authentication is two separate configs:
+        - Streaming Hub: publisher-side auth (TBD — confirm with Philippe)
+        - Buyer Cloud: demand-side auth, likely OAuth 2.0 (TBD — confirm with Philippe)
+
+        These are separate credential sets — a publisher configures both if they
+        need full PG booking (SH + BC), or just SH for PD/PA deals.
+
+        TODO(freewheel-auth): Philippe to confirm:
+        - SH auth mechanism (API key? username/password? OAuth?)
+        - BC auth mechanism (OAuth client_credentials? session login?)
+        - Whether SH login tool returns a session_id or uses header auth
+        - How publisher seats/accounts/networks are identified (network_id param?)
+        """
         settings = self._get_settings()
 
         sh_url = settings.freewheel_sh_mcp_url
@@ -75,36 +131,32 @@ class FreeWheelAdServerClient(AdServerClient):
                 "Set it to the Streaming Hub MCP endpoint."
             )
 
-        # Connect to Streaming Hub
-        auth_params = {}
-        if settings.freewheel_sh_username:
-            auth_params["username"] = settings.freewheel_sh_username
-        if settings.freewheel_sh_password:
-            auth_params["password"] = settings.freewheel_sh_password
+        # --- Streaming Hub auth (STUB — real auth TBD with Philippe) ---
+        sh_auth = _build_sh_auth_params(settings)
 
         await self._sh_client.connect(
             url=sh_url,
-            auth_params=auth_params if auth_params else None,
-            login_tool="streaming_hub_login" if auth_params else None,
+            auth_params=sh_auth if sh_auth else None,
+            login_tool="streaming_hub_login" if sh_auth else None,
         )
 
-        # Connect to Buyer Cloud if configured (Phase 3)
+        logger.info(
+            "Connected to Streaming Hub (network=%s)",
+            settings.freewheel_network_id or "default",
+        )
+
+        # --- Buyer Cloud auth (STUB — real auth TBD with Philippe) ---
         bc_url = settings.freewheel_bc_mcp_url
         if bc_url:
             self._bc_client = FreeWheelMCPClient()
-            bc_auth = {}
-            if settings.freewheel_bc_email:
-                bc_auth["email"] = settings.freewheel_bc_email
-            if settings.freewheel_bc_password:
-                bc_auth["password"] = settings.freewheel_bc_password
-            if settings.freewheel_bc_buzz_key:
-                bc_auth["buzz_key"] = settings.freewheel_bc_buzz_key
+            bc_auth = _build_bc_auth_params(settings)
 
             await self._bc_client.connect(
                 url=bc_url,
                 auth_params=bc_auth if bc_auth else None,
                 login_tool="buyer_cloud_login" if bc_auth else None,
             )
+            logger.info("Connected to Buyer Cloud")
 
     async def disconnect(self) -> None:
         """Disconnect from FreeWheel MCP servers."""

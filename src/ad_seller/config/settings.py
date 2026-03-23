@@ -79,9 +79,10 @@ class Settings(BaseSettings):
     freewheel_enabled: bool = False  # Feature flag to enable FreeWheel integration
     freewheel_api_url: Optional[str] = None  # Legacy — use MCP URLs below
     freewheel_api_key: Optional[str] = None  # Legacy — use MCP auth below
+    freewheel_network_id: Optional[str] = None  # Publisher network/account ID in FreeWheel
     # Streaming Hub MCP (publisher-side: inventory, deals, audiences)
     freewheel_sh_mcp_url: Optional[str] = None  # e.g. https://shmcp.freewheel.com
-    freewheel_sh_username: Optional[str] = None
+    freewheel_sh_username: Optional[str] = None  # TODO(freewheel-auth): confirm auth mechanism
     freewheel_sh_password: Optional[str] = None
     # Buyer Cloud MCP (demand-side: campaign execution, creatives, reporting)
     freewheel_bc_mcp_url: Optional[str] = None  # e.g. https://bcmcp.freewheel.com
