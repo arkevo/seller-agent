@@ -147,7 +147,7 @@ AGENT_RANGE_CURATOR = Curator(
         "Curates inventory using proprietary models to maximize "
         "deal performance for agencies and advertisers."
     ),
-    fee=CuratorFee(fee_type=CuratorFeeType.PERCENT, fee_value=5.0),
+    fee=CuratorFee(fee_type=CuratorFeeType.PERCENT, fee_value=10.0),
     supported_deal_types=["pmp", "preferred", "pg", "auction_package"],
     tags=["optimization", "ai", "deal-jockey"],
 )
