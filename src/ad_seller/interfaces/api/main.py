@@ -3571,3 +3571,211 @@ async def get_sync_watermark():
 
     return watermark
 
+
+# =============================================================================
+# IAB Deals API v1.0 — Deal Push & Status
+# =============================================================================
+
+
+class DealPushRequest(BaseModel):
+    """Request to push a deal to buyer(s)."""
+
+    deal_id: str
+    buyer_urls: list[str]  # Buyer deal receiving endpoints
+    buyer_api_keys: Optional[list[str]] = None  # Optional per-buyer API keys
+    # Deal data (if not already stored — allows ad-hoc push)
+    deal_type: Optional[str] = None
+    price: Optional[float] = None
+    name: Optional[str] = None
+    impressions: Optional[int] = None
+    flight_start: Optional[str] = None
+    flight_end: Optional[str] = None
+    buyer_seat_ids: Optional[list[str]] = None
+
+
+@app.post("/api/v1/deals/push", tags=["Deal Booking"])
+async def push_deal_to_buyers(request: DealPushRequest):
+    """Push a deal to one or more buyer endpoints via IAB Deals API v1.0.
+
+    The seller sends deal terms to buyer DSPs. Each buyer receives an
+    HTTP POST with the full IAB Deal object and responds with acceptance status.
+
+    This is the standardized deal distribution path — alternative to
+    SSP-mediated distribution (PubMatic, Index Exchange, etc.).
+    """
+    from ...services.deals_api import DealsAPIService
+    from ...storage.factory import get_storage
+    from ...config import get_settings
+
+    settings = get_settings()
+    service = DealsAPIService()
+
+    # Try to load deal from storage first
+    storage = await get_storage()
+    stored_deal = await storage.get_deal(request.deal_id)
+
+    # Build IAB Deal object
+    deal_type = request.deal_type or (stored_deal or {}).get("deal_type", "PD")
+    price = request.price or (stored_deal or {}).get("actual_price_cpm") or (stored_deal or {}).get("pricing", {}).get("final_cpm", 0)
+
+    deal_obj = service.build_deal_object(
+        deal_id=request.deal_id,
+        deal_type=deal_type,
+        price=price,
+        name=request.name or (stored_deal or {}).get("name"),
+        impressions=request.impressions or (stored_deal or {}).get("impressions"),
+        flight_start=request.flight_start or (stored_deal or {}).get("flight_start"),
+        flight_end=request.flight_end or (stored_deal or {}).get("flight_end"),
+        buyer_seat_ids=request.buyer_seat_ids or (stored_deal or {}).get("buyer_seat_ids", []),
+        seller_id=getattr(settings, "seller_organization_id", None),
+        seller_domain=getattr(settings, "seller_domain", None),
+    )
+
+    # Build buyer configs
+    buyer_configs = []
+    for i, url in enumerate(request.buyer_urls):
+        config = {"url": url}
+        if request.buyer_api_keys and i < len(request.buyer_api_keys):
+            config["api_key"] = request.buyer_api_keys[i]
+        buyer_configs.append(config)
+
+    # Push to all buyers
+    results = await service.push_deal_to_multiple_buyers(deal_obj, buyer_configs)
+
+    return {
+        "deal_id": request.deal_id,
+        "pushed_to": len(results),
+        "succeeded": sum(1 for r in results if r.success),
+        "failed": sum(1 for r in results if not r.success),
+        "results": [r.model_dump() for r in results],
+    }
+
+
+@app.get("/api/v1/deals/{deal_id}/buyer-status", tags=["Deal Booking"])
+async def get_deal_buyer_status(deal_id: str, buyer_url: str):
+    """Query a buyer for their acceptance status of a deal.
+
+    Polls the buyer's deal status endpoint to check if the deal
+    has been approved, rejected, or is ready to serve.
+    """
+    from ...services.deals_api import DealsAPIService
+
+    service = DealsAPIService()
+    result = await service.query_deal_status(deal_id, buyer_url)
+    return result.model_dump()
+
+
+# =============================================================================
+# SSP Deal Distribution
+# =============================================================================
+
+
+class SSPDealDistributeRequest(BaseModel):
+    """Request to distribute a deal through configured SSPs."""
+
+    deal_id: str
+    deal_type: Optional[str] = "PMP"
+    name: Optional[str] = None
+    advertiser: Optional[str] = None
+    cpm: Optional[float] = None
+    buyer_seat_ids: Optional[list[str]] = None
+    start_date: Optional[str] = None
+    end_date: Optional[str] = None
+    targeting: Optional[dict[str, Any]] = None
+    # Routing hint — if set, routes to this SSP. Otherwise uses routing rules.
+    ssp_name: Optional[str] = None
+    inventory_type: Optional[str] = None  # for routing: ctv, display, video, etc.
+
+
+@app.post("/api/v1/deals/distribute", tags=["Deal Booking"])
+async def distribute_deal_via_ssp(request: SSPDealDistributeRequest):
+    """Distribute a deal through configured SSP(s).
+
+    Routes the deal to the appropriate SSP based on routing rules
+    or explicit ssp_name. The SSP handles DSP-side distribution.
+
+    Supports multiple SSPs: PubMatic (MCP), Index Exchange (REST),
+    Magnite (REST), or any configured SSP connector.
+    """
+    from ...clients.ssp_base import SSPDealCreateRequest, SSPDealType
+    from ...clients.ssp_factory import build_ssp_registry
+
+    registry = build_ssp_registry()
+
+    if not registry.list_ssps():
+        raise HTTPException(
+            status_code=503,
+            detail={"error": "no_ssps_configured", "message": "No SSP connectors configured. Set SSP_CONNECTORS in environment."},
+        )
+
+    # Get the right SSP client
+    try:
+        if request.ssp_name:
+            ssp = registry.get_client(request.ssp_name)
+        else:
+            ssp = registry.get_client_for(
+                inventory_type=request.inventory_type,
+                deal_type=request.deal_type,
+            )
+    except (KeyError, RuntimeError) as e:
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "ssp_routing_failed", "message": str(e), "available_ssps": registry.list_ssps()},
+        )
+
+    # Map deal type
+    deal_type_map = {
+        "PMP": SSPDealType.PMP,
+        "PG": SSPDealType.PG,
+        "PREFERRED": SSPDealType.PREFERRED,
+        "pmp": SSPDealType.PMP,
+        "pg": SSPDealType.PG,
+        "preferred": SSPDealType.PREFERRED,
+    }
+
+    create_request = SSPDealCreateRequest(
+        deal_type=deal_type_map.get(request.deal_type or "PMP", SSPDealType.PMP),
+        name=request.name,
+        advertiser=request.advertiser,
+        cpm=request.cpm,
+        buyer_seat_ids=request.buyer_seat_ids or [],
+        start_date=request.start_date,
+        end_date=request.end_date,
+        targeting=request.targeting,
+    )
+
+    async with ssp:
+        result = await ssp.create_deal(create_request)
+
+    return {
+        "deal_id": result.deal_id,
+        "ssp": result.ssp_name,
+        "ssp_type": result.ssp_type.value,
+        "status": result.status.value,
+        "deal": result.model_dump(exclude={"raw"}),
+    }
+
+
+@app.get("/api/v1/deals/{deal_id}/ssp-troubleshoot", tags=["Deal Booking"])
+async def troubleshoot_deal_via_ssp(deal_id: str, ssp_name: str):
+    """Troubleshoot a deal via SSP diagnostics.
+
+    Calls the SSP's troubleshooting tool (e.g., PubMatic's
+    deal_troubleshooting) to diagnose performance issues.
+    """
+    from ...clients.ssp_factory import build_ssp_registry
+
+    registry = build_ssp_registry()
+
+    try:
+        ssp = registry.get_client(ssp_name)
+    except KeyError:
+        raise HTTPException(
+            status_code=400,
+            detail={"error": "unknown_ssp", "message": f"SSP '{ssp_name}' not configured.", "available_ssps": registry.list_ssps()},
+        )
+
+    async with ssp:
+        result = await ssp.troubleshoot_deal(deal_id)
+
+    return result.model_dump(exclude={"raw"})

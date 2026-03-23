@@ -234,6 +234,76 @@ class ExecutionActivationFlow(Flow[ExecutionState]):
             self.state.status = ExecutionStatus.FAILED
 
     @listen(sync_deal_id_to_ad_server, sync_io_order_to_ad_server)
+    async def distribute_to_ssps(self) -> None:
+        """Distribute deal to configured SSPs after ad server sync.
+
+        If SSP connectors are configured, pushes the deal to the appropriate
+        SSP(s) based on routing rules. The SSP handles DSP-side distribution.
+        This runs in parallel with (not instead of) ad server sync.
+        """
+        if self.state.status == ExecutionStatus.FAILED:
+            return
+
+        deal = self.state.deals.get(self.state.deal_id)
+        if not deal:
+            return
+
+        try:
+            from ..config import get_settings
+            settings = get_settings()
+
+            if not settings.ssp_connectors:
+                return  # No SSPs configured — skip
+
+            from ..clients.ssp_factory import build_ssp_registry
+            from ..clients.ssp_base import SSPDealCreateRequest, SSPDealType
+
+            registry = build_ssp_registry(settings)
+            if not registry.list_ssps():
+                return
+
+            # Map deal type
+            deal_type_str = deal.deal_type.value if hasattr(deal.deal_type, "value") else str(deal.deal_type)
+            ssp_deal_type = SSPDealType.PMP
+            if "guaranteed" in deal_type_str:
+                ssp_deal_type = SSPDealType.PG
+            elif "preferred" in deal_type_str:
+                ssp_deal_type = SSPDealType.PREFERRED
+
+            create_req = SSPDealCreateRequest(
+                deal_type=ssp_deal_type,
+                name=f"Deal {deal.deal_id}",
+                cpm=deal.price,
+            )
+
+            # Route to appropriate SSP
+            ssp = registry.get_client_for(
+                inventory_type=getattr(deal, "product_id", None),
+                deal_type=deal_type_str,
+            )
+
+            async with ssp:
+                ssp_result = await ssp.create_deal(create_req)
+
+            self.state.execution_orders.setdefault(deal.deal_id, {})["ssp_deal"] = {
+                "ssp_name": ssp_result.ssp_name,
+                "ssp_deal_id": ssp_result.deal_id,
+                "ssp_status": ssp_result.status.value,
+            }
+
+            await emit_event(
+                event_type=EventType.DEAL_SYNCED,
+                flow_id=self.state.flow_id,
+                flow_type=self.state.flow_type,
+                deal_id=self.state.deal_id,
+                payload={"ssp_name": ssp_result.ssp_name, "ssp_deal_id": ssp_result.deal_id},
+            )
+
+        except Exception as e:
+            # SSP distribution failure is non-fatal — deal still exists in ad server
+            self.state.warnings.append(f"SSP distribution failed (non-fatal): {e}")
+
+    @listen(distribute_to_ssps)
     async def update_execution_status(self) -> None:
         """Update execution order status after sync."""
         if self.state.status == ExecutionStatus.FAILED:
