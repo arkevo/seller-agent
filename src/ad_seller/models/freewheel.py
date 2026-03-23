@@ -33,7 +33,7 @@ class FWSellerType(str, Enum):
 class FWInventoryPackage(BaseModel):
     """Raw FreeWheel inventory package (template deal) before normalization.
 
-    Philippe's list_inventory() returns these as "template deals"
+    FreeWheel team's list_inventory() returns these as "template deals"
     representing packages on Streaming Hub.
     """
 

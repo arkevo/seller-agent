@@ -6,7 +6,7 @@
 Converts FreeWheel-native field names, status values, and pricing formats
 to the ad-server-agnostic types defined in ad_server_base.py.
 
-Philippe's responses are not yet OpenDirect compliant but data maps to
+FreeWheel team's responses are not yet OpenDirect compliant but data maps to
 IAB taxonomy. This module handles the translation.
 """
 
@@ -71,7 +71,7 @@ _DEAL_TYPE_MAP: dict[str, str] = {
 def normalize_inventory(raw_items: list[dict[str, Any]]) -> list[AdServerInventoryItem]:
     """Normalize FreeWheel inventory packages to AdServerInventoryItem.
 
-    Philippe's list_inventory() returns "template deals" from SH
+    FreeWheel team's list_inventory() returns "template deals" from SH
     representing packages. Each becomes an inventory item.
     """
     items = []
@@ -162,7 +162,7 @@ def normalize_deal(raw: dict[str, Any]) -> AdServerDeal:
 def normalize_booking_result(raw: dict[str, Any]) -> BookingResult:
     """Normalize a FreeWheel book_deal response to BookingResult.
 
-    Philippe's book_deal() creates deals on both SH and BC but does NOT
+    FreeWheel team's book_deal() creates deals on both SH and BC but does NOT
     create campaign/line item/creative on BC. So the result has a deal
     but no order or line items.
     """

@@ -6,7 +6,7 @@
 Routes operations to FreeWheel's Streaming Hub (publisher-side) and
 Buyer Cloud (demand-side) MCP servers.
 
-Key architectural note from Philippe (FreeWheel):
+Key architectural note from FreeWheel team (FreeWheel):
   Streaming Hub programmatic deals do NOT require IO, Campaign, or Placement.
   Those are direct-sold concepts only. The SH side is simpler: deals are
   created directly via book_deal() which handles both SH and BC.
@@ -40,14 +40,14 @@ logger = logging.getLogger(__name__)
 
 
 # =============================================================================
-# Auth helpers (STUBS — real auth TBD with Philippe)
+# Auth helpers (STUBS — real auth TBD with FreeWheel team)
 # =============================================================================
 
 
 def _build_sh_auth_params(settings: Any) -> dict[str, str]:
     """Build Streaming Hub auth params from settings.
 
-    TODO(freewheel-auth): Replace with real auth once Philippe confirms
+    TODO(freewheel-auth): Replace with real auth once FreeWheel team confirms
     the SH MCP auth mechanism (API key, username/password, OAuth, etc.)
     """
     params: dict[str, str] = {}
@@ -63,7 +63,7 @@ def _build_sh_auth_params(settings: Any) -> dict[str, str]:
 def _build_bc_auth_params(settings: Any) -> dict[str, str]:
     """Build Buyer Cloud auth params from settings.
 
-    TODO(freewheel-auth): Replace with real auth once Philippe confirms
+    TODO(freewheel-auth): Replace with real auth once FreeWheel team confirms
     the BC MCP auth mechanism. Likely OAuth 2.0 client_credentials +
     session login (email/password/buzz_key).
     """
@@ -110,13 +110,13 @@ class FreeWheelAdServerClient(AdServerClient):
         """Connect to FreeWheel Streaming Hub MCP (and BC if configured).
 
         Authentication is two separate configs:
-        - Streaming Hub: publisher-side auth (TBD — confirm with Philippe)
-        - Buyer Cloud: demand-side auth, likely OAuth 2.0 (TBD — confirm with Philippe)
+        - Streaming Hub: publisher-side auth (TBD — confirm with FreeWheel team)
+        - Buyer Cloud: demand-side auth, likely OAuth 2.0 (TBD — confirm with FreeWheel team)
 
         These are separate credential sets — a publisher configures both if they
         need full PG booking (SH + BC), or just SH for PD/PA deals.
 
-        TODO(freewheel-auth): Philippe to confirm:
+        TODO(freewheel-auth): FreeWheel team to confirm:
         - SH auth mechanism (API key? username/password? OAuth?)
         - BC auth mechanism (OAuth client_credentials? session login?)
         - Whether SH login tool returns a session_id or uses header auth
@@ -131,7 +131,7 @@ class FreeWheelAdServerClient(AdServerClient):
                 "Set it to the Streaming Hub MCP endpoint."
             )
 
-        # --- Streaming Hub auth (STUB — real auth TBD with Philippe) ---
+        # --- Streaming Hub auth (STUB — real auth TBD with FreeWheel team) ---
         sh_auth = _build_sh_auth_params(settings)
 
         await self._sh_client.connect(
@@ -145,7 +145,7 @@ class FreeWheelAdServerClient(AdServerClient):
             settings.freewheel_network_id or "default",
         )
 
-        # --- Buyer Cloud auth (STUB — real auth TBD with Philippe) ---
+        # --- Buyer Cloud auth (STUB — real auth TBD with FreeWheel team) ---
         bc_url = settings.freewheel_bc_mcp_url
         if bc_url:
             self._bc_client = FreeWheelMCPClient()
@@ -291,7 +291,7 @@ class FreeWheelAdServerClient(AdServerClient):
     ) -> AdServerLineItem:
         """Not supported on SH — campaigns/placements are direct-sold only.
 
-        Phase 3 will implement BC line item creation if Philippe adds
+        Phase 3 will implement BC line item creation if FreeWheel team adds
         BC campaign/line item management to the MCP.
         """
         raise NotImplementedError(
@@ -329,7 +329,7 @@ class FreeWheelAdServerClient(AdServerClient):
     ) -> AdServerDeal:
         """Create a deal via FreeWheel's book_deal MCP tool.
 
-        Philippe's book_deal() creates on both SH and BC.
+        FreeWheel team's book_deal() creates on both SH and BC.
         """
         args: dict[str, Any] = {
             "deal_id": deal_id,
@@ -390,7 +390,7 @@ class FreeWheelAdServerClient(AdServerClient):
         """Book a deal via FreeWheel's book_deal MCP tool.
 
         This is the primary deal creation path for FreeWheel.
-        Philippe's book_deal() handles both SH and BC in one call.
+        FreeWheel team's book_deal() handles both SH and BC in one call.
         Returns BookingResult with deal but no order/line items
         (SH programmatic doesn't use those).
         """

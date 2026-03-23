@@ -221,7 +221,7 @@ The Streaming Hub MCP (`shmcp.freewheel.com`) is the publisher-side ad server. T
 ### 1.5 Campaign & Placement (Line Item) — DIRECT-SOLD ONLY
 
 > **NOT USED for programmatic deals.** Campaigns and placements are direct-sold
-> concepts on Streaming Hub. Philippe has offered to recycle `*_line_item()` for
+> concepts on Streaming Hub. FreeWheel team has offered to recycle `*_line_item()` for
 > Buyer Cloud campaign/line item management in a future phase.
 
 | SH Tool | Seller Agent Method | What We Use It For |
@@ -323,7 +323,7 @@ The **external deal ID** (the OpenRTB deal ID used in bid requests) is the share
 └─────────────────────────────────┘     └────────────────────────────────┘
 ```
 
-> **CONFIRMED by Philippe (FreeWheel):** Streaming Hub programmatic deals do NOT
+> **CONFIRMED by FreeWheel team (FreeWheel):** Streaming Hub programmatic deals do NOT
 > require IO, Campaign, or Placement objects. Those are direct-sold concepts only.
 > The SH side is simpler: deals are created directly via `book_deal()`.
 
@@ -430,10 +430,10 @@ Seller Agent Response (BookingResult):
 
 ### UC4: Book PG Deal (Cross-MCP)
 
-> **REVISED per Philippe's feedback:** No IO/campaign/placement needed on SH.
-> Philippe's `book_deal()` handles both SH and BC deal creation in one call.
+> **REVISED per FreeWheel team's feedback:** No IO/campaign/placement needed on SH.
+> FreeWheel team's `book_deal()` handles both SH and BC deal creation in one call.
 
-Programmatic Guaranteed deals require setup in **both** MCPs. Philippe's
+Programmatic Guaranteed deals require setup in **both** MCPs. FreeWheel team's
 `book_deal()` creates the deal on SH and BC. BC campaign/line item/creative
 management is a separate step (Phase 3).
 
@@ -442,7 +442,7 @@ Negotiation accepted → ExecutionActivationFlow:
 
   ── Step 1: Deal creation (SH + BC) ─────────────────────
 
-  1. Philippe's book_deal()
+  1. FreeWheel team's book_deal()
      - Creates deal on Streaming Hub (with external deal_id, pricing, inventory)
      - Creates deal on Buyer Cloud (linked via deal_id)
      - Does NOT create BC campaign/line item/creative
@@ -451,12 +451,12 @@ Negotiation accepted → ExecutionActivationFlow:
 
   ── Step 2: BC campaign setup (Phase 3 — future) ────────
 
-  2. BC: campaign + line item creation (when Philippe adds *_line_item() for BC)
+  2. BC: campaign + line item creation (when FreeWheel team adds *_line_item() for BC)
   3. BC: creative attachment
   4. BC: campaign activation
 ```
 
-**MCP:** Both (via Philippe's `book_deal()` which orchestrates SH + BC)
+**MCP:** Both (via FreeWheel team's `book_deal()` which orchestrates SH + BC)
 
 ### UC5: Campaign Reporting
 
@@ -494,10 +494,10 @@ This table shows every `AdServerClient` method and which MCP tool(s) the seller 
 | `update_line_item()` | — | Not used on SH (direct-sold only) | Phase 3: BC line item updates |
 | `create_deal()` | SH | `sh_1_0_createdeal` + `sh_1_0_activatedeal` | — |
 | `update_deal()` | SH | `sh_1_0_updatedeal` | — |
-| `book_deal()` — PD/PA | Both | Philippe's `book_deal` (creates deal on SH + BC) | — |
-| `book_deal()` — PG | Both | Philippe's `book_deal` (creates deal on SH + BC) | Phase 3: campaign + line item + creative |
+| `book_deal()` — PD/PA | Both | FreeWheel team's `book_deal` (creates deal on SH + BC) | — |
+| `book_deal()` — PG | Both | FreeWheel team's `book_deal` (creates deal on SH + BC) | Phase 3: campaign + line item + creative |
 
-### Philippe's Implemented MCP Tools (CONFIRMED)
+### FreeWheel team's Implemented MCP Tools (CONFIRMED)
 
 | MCP Tool | Status | Description |
 |---|---|---|
