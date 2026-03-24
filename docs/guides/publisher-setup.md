@@ -4,12 +4,12 @@ Step-by-step guide for publishers deploying the IAB Tech Lab Seller Agent.
 
 ## Recommended: Interactive Setup Wizard
 
-The fastest way to set up your seller agent is the **interactive setup wizard** via Claude Desktop. It walks you through every configuration step conversationally.
+The fastest way to set up your seller agent is the **interactive setup wizard** via Claude, ChatGPT, or any MCP-compatible assistant. It walks you through every configuration step conversationally.
 
 1. **Developer** runs [Developer Setup](developer-setup.md) in Claude Code — deploys server, connects ad server + SSPs, generates credentials
-2. **Publisher ops** adds the config to [Claude Desktop](claude-desktop-setup.md) — the wizard auto-launches and guides through business setup
+2. **Publisher ops** adds the seller agent to [Claude](claude-desktop-setup.md) (desktop or web), [ChatGPT, or Codex](chatgpt-setup.md) — the wizard auto-launches and guides through business setup
 
-> See [Claude Desktop Setup Guide](claude-desktop-setup.md) for the full walkthrough.
+> See [Claude Setup Guide](claude-desktop-setup.md) or [ChatGPT & AI IDEs Guide](chatgpt-setup.md) for the full walkthrough.
 
 ## Manual Setup Checklist
 

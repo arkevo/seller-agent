@@ -151,7 +151,7 @@ curl -X POST http://localhost:8000/api/v1/inventory-sync/trigger
 curl -X POST "http://localhost:8000/api/v1/inventory-sync/trigger?incremental=true"
 ```
 
-Or via Claude Desktop: *"Sync my inventory"*
+Or via Claude / ChatGPT: *"Sync my inventory"*
 
 ## Sync Status & Watermarks
 

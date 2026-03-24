@@ -2,7 +2,7 @@
 
 The Ad Seller Agent is an **IAB OpenDirect 2.1 compliant** programmatic advertising seller system. It enables automated ad selling through AI agents, supporting the full lifecycle from inventory discovery through deal execution, SSP distribution, and post-deal management.
 
-**Manage everything from Claude Desktop** — the seller agent exposes 45+ MCP tools for conversational setup and day-to-day operations. An interactive setup wizard walks publishers through configuration step by step.
+**Manage everything from Claude, ChatGPT, or any MCP-compatible AI assistant** — the seller agent exposes 45+ MCP tools for conversational setup and day-to-day operations. An interactive setup wizard walks publishers through configuration step by step.
 
 Part of the IAB Tech Lab Agent Ecosystem --- see also the [Buyer Agent](https://iabtechlab.github.io/buyer-agent/).
 
@@ -10,13 +10,13 @@ Part of the IAB Tech Lab Agent Ecosystem --- see also the [Buyer Agent](https://
 
 | Protocol | Endpoint | Best For |
 |----------|----------|----------|
-| **[MCP](api/mcp.md)** | `/mcp/sse` | Primary interface — 45+ tools for Claude Desktop, ChatGPT, and buyer agents |
+| **[MCP](api/mcp.md)** | `/mcp/sse` | Primary interface — 45+ tools for Claude, ChatGPT, Codex, Cursor, and buyer agents |
 | **[A2A](api/a2a.md)** | `/a2a/seller/jsonrpc` | Conversational agent interactions — natural language, multi-turn |
 | **[REST API](api/overview.md)** | `/api/v1/*` | Programmatic access — 70+ endpoints across 15 groups |
 
 ## Key Capabilities
 
-- **45+ MCP tools** for Claude Desktop / ChatGPT — interactive setup wizard + full operations
+- **45+ MCP tools** for Claude, ChatGPT, Codex, Cursor, and Windsurf — interactive setup wizard + full operations
 - **70+ REST endpoints** across 15 categories covering the complete ad selling workflow
 - **Pluggable ad server** support — Google Ad Manager and FreeWheel (Streaming Hub + Buyer Cloud)
 - **Multi-SSP distribution** — PubMatic (MCP), Index Exchange (REST), Magnite (REST) with routing rules
@@ -37,7 +37,7 @@ Part of the IAB Tech Lab Agent Ecosystem --- see also the [Buyer Agent](https://
 ### Recommended: Interactive Setup Wizard
 
 1. **Developer** deploys the server and connects ad server + SSPs → [Developer Setup](guides/developer-setup.md)
-2. **Publisher ops** adds Claude Desktop config → wizard guides through business setup → [Claude Desktop Setup](guides/claude-desktop-setup.md)
+2. **Publisher ops** adds seller agent to Claude (desktop/web), ChatGPT, or Codex → wizard guides through business setup → [Setup Guide](guides/claude-desktop-setup.md)
 
 ### Manual Setup
 
@@ -48,14 +48,14 @@ Part of the IAB Tech Lab Agent Ecosystem --- see also the [Buyer Agent](https://
 
 ### AI Assistant Setup
 
-- [Claude Desktop Setup](guides/claude-desktop-setup.md) — publisher setup via interactive wizard
+- [Claude (Desktop & Web)](guides/claude-desktop-setup.md) — publisher setup via interactive wizard
 - [ChatGPT / Codex Setup](guides/chatgpt-setup.md) — OpenAI configuration
 - [Developer Setup](guides/developer-setup.md) — infrastructure and credential setup
 
 ### API Reference
 
 - [API Overview](api/overview.md) --- all 70+ endpoints grouped by tag
-- [MCP Protocol](api/mcp.md) --- 45+ MCP tools for Claude Desktop and buyer agents
+- [MCP Protocol](api/mcp.md) --- 45+ MCP tools for Claude, ChatGPT, and buyer agents
 - [A2A Protocol](api/a2a.md) --- conversational agent-to-agent interface
 - [Agent Discovery](api/agent-discovery.md) --- `/.well-known/agent.json` and trust registry
 - [Authentication](api/authentication.md) --- API keys, access tiers, and agent trust

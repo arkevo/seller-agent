@@ -1,6 +1,6 @@
 # MCP (Model Context Protocol)
 
-MCP is the **primary interface** for the seller agent. Publishers manage their agent from Claude Desktop or ChatGPT via 45+ MCP tools. Buyer agents also call seller tools through MCP for automated workflows.
+MCP is the **primary interface** for the seller agent. Publishers manage their agent from Claude (desktop or web), ChatGPT, Codex, Cursor, or any MCP-compatible assistant via 45+ tools. Buyer agents also call seller tools through MCP for automated workflows.
 
 ## Connection
 
@@ -8,22 +8,32 @@ MCP is the **primary interface** for the seller agent. Publishers manage their a
 |----------|--------|-------------|
 | `/mcp/sse` | GET | SSE transport for persistent MCP sessions |
 
-### Claude Desktop Configuration
+### Setup
 
+**Claude (Desktop & Web):** Settings > Integrations > Add Custom Integration > paste your MCP URL
+
+**ChatGPT:** Settings > Apps & Connectors > Developer Mode > Create connector > paste your MCP URL
+
+**Codex:** Add to `~/.codex/config.toml`:
+```toml
+[mcp_servers.seller-agent]
+url = "https://your-server.example.com/mcp/sse"
+bearer_token_env_var = "SELLER_AGENT_API_KEY"
+```
+
+**Cursor:** Add to `.cursor/mcp.json`:
 ```json
 {
   "mcpServers": {
     "seller-agent": {
       "url": "https://your-server.example.com/mcp/sse",
-      "headers": {
-        "Authorization": "Bearer <operator-api-key>"
-      }
+      "headers": { "Authorization": "Bearer <operator-api-key>" }
     }
   }
 }
 ```
 
-See the [Claude Desktop Setup Guide](../guides/claude-desktop-setup.md) for full instructions.
+See full setup guides: [Claude](../guides/claude-desktop-setup.md) | [ChatGPT, Codex & AI IDEs](../guides/chatgpt-setup.md)
 
 ## Available Tools (45+)
 
@@ -125,7 +135,7 @@ See the [Claude Desktop Setup Guide](../guides/claude-desktop-setup.md) for full
 
 ## When to Use MCP
 
-- **Publishers**: Manage your seller agent from Claude Desktop — setup, deals, pricing, approvals
+- **Publishers**: Manage your seller agent from Claude, ChatGPT, or any MCP assistant — setup, deals, pricing, approvals
 - **Buyer agents**: Automated deal workflows — structured, deterministic, fastest path
 - **ChatGPT users**: Same tools available via MCP connection
 
@@ -142,7 +152,7 @@ See the [Claude Desktop Setup Guide](../guides/claude-desktop-setup.md) for full
 
 ## See Also
 
-- [Claude Desktop Setup Guide](../guides/claude-desktop-setup.md) — publisher setup instructions
+- [Claude Setup Guide](../guides/claude-desktop-setup.md) — Claude desktop & web setup
 - [ChatGPT Setup Guide](../guides/chatgpt-setup.md) — OpenAI configuration
 - [Developer Setup Guide](../guides/developer-setup.md) — infrastructure setup
 - [A2A Protocol](a2a.md) — conversational agent-to-agent interface

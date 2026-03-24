@@ -9,7 +9,7 @@ An AI-powered inventory management system for **publishers and SSPs** to automat
 
 ## What This Does
 
-- **Manage your seller agent from Claude Desktop** — interactive setup wizard + 45+ MCP tools for day-to-day operations
+- **Manage your seller agent from Claude** (desktop or web) — interactive setup wizard + 45+ MCP tools for day-to-day operations
 - **Expose your inventory** via a tiered Media Kit with public and authenticated views
 - **Automate deal negotiations** with AI agents that understand your pricing rules
 - **Offer tiered pricing** based on buyer identity (public, seat, agency, advertiser)
@@ -28,7 +28,7 @@ The seller agent exposes four communication interfaces:
 
 | Interface | Protocol | Use Case |
 |-----------|----------|----------|
-| **MCP** | `/mcp/sse` | Primary interface — 45+ tools for Claude Desktop, ChatGPT, and buyer agents |
+| **MCP** | `/mcp/sse` | Primary interface — 45+ tools for Claude, ChatGPT, Codex, Cursor, and buyer agents |
 | **A2A** | `/a2a/{agent}/jsonrpc` | Conversational JSON-RPC 2.0 for natural language queries |
 | **REST** | `/api/v1/*` | Programmatic access — 70+ endpoints across 15 groups |
 | **Chat** | `/chat` | Web-based conversational interface for human buyers |
@@ -38,7 +38,7 @@ The seller agent exposes four communication interfaces:
 ## Architecture
 
 ```
-Claude Desktop / ChatGPT ──→ MCP SSE (/mcp/sse) ──┐
+Claude / ChatGPT / Codex ──→ MCP SSE (/mcp/sse) ──┐
 Buyer Agents ──→ A2A / REST ───────────────────────┤
                                                     ▼
                                               FastAPI App
@@ -97,9 +97,9 @@ uvicorn ad_seller.interfaces.api.main:app --port 8000
 
 > [Developer Setup Guide](https://iabtechlab.github.io/seller-agent/guides/developer-setup/)
 
-### For Publishers (Claude Desktop)
+### For Publishers (Claude Desktop / Web / ChatGPT)
 
-Add the seller agent to Claude Desktop and the setup wizard walks you through everything:
+Add the seller agent to Claude (desktop or web) and the setup wizard walks you through everything:
 
 ```json
 // ~/Library/Application Support/Claude/claude_desktop_config.json
@@ -115,11 +115,11 @@ Add the seller agent to Claude Desktop and the setup wizard walks you through ev
 
 The wizard guides you through: publisher identity → agent behavior → media kit → pricing → approval gates → buyer registration → curators → launch.
 
-> [Claude Desktop Setup Guide](https://iabtechlab.github.io/seller-agent/guides/claude-desktop-setup/)
+> [Claude Setup Guide](https://iabtechlab.github.io/seller-agent/guides/claude-desktop-setup/)
 
 ## Key Features
 
-### MCP Tools (45+ tools for Claude Desktop / ChatGPT)
+### MCP Tools (45+ tools for Claude / ChatGPT / Codex / Cursor)
 
 | Category | Tools | Examples |
 |----------|-------|---------|
