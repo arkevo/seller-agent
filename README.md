@@ -1,5 +1,5 @@
 > **V2 — Active Development**
-> See [PROGRESS.md](.beads/PROGRESS.md) for roadmap status.
+> See [PROGRESS.md](.beads/PROGRESS.md) for roadmap status (93% complete).
 
 # IAB Tech Lab — Seller Agent
 
@@ -9,44 +9,62 @@ An AI-powered inventory management system for **publishers and SSPs** to automat
 
 ## What This Does
 
+- **Manage your seller agent from Claude Desktop** — interactive setup wizard + 45+ MCP tools for day-to-day operations
 - **Expose your inventory** via a tiered Media Kit with public and authenticated views
 - **Automate deal negotiations** with AI agents that understand your pricing rules
 - **Offer tiered pricing** based on buyer identity (public, seat, agency, advertiser)
-- **Generate Deal IDs** compatible with any DSP (The Trade Desk, Amazon, DV360, etc.)
+- **Generate Deal IDs** compatible with any DSP (The Trade Desk, Amazon, DV360, Xandr)
+- **Distribute deals through SSPs** — PubMatic (MCP), Index Exchange (REST), Magnite (REST)
+- **Push deals to buyers** via IAB Deals API v1.0 standardized push
 - **Manage orders** with a full state machine (draft → booked → delivering → complete)
-- **Human-in-the-loop** approval gates for operator oversight of deal decisions
-- **Connect to ad servers** via a pluggable interface — GAM supported today, FreeWheel in progress, extend for any ad server
+- **Human-in-the-loop** approval gates with configurable guard conditions
+- **Connect to ad servers** via a pluggable interface — GAM and FreeWheel supported
+- **Support curators** — Agent Range pre-registered, fee-based curation with schain
+- **Track deal lineage** — migration, deprecation, and full evolution chain
 
 ## Access Methods
 
-The seller agent exposes three communication interfaces:
+The seller agent exposes four communication interfaces:
 
 | Interface | Protocol | Use Case |
 |-----------|----------|----------|
-| **MCP** | `/mcp/sse` | Primary agentic interface — structured tool calls for buyer agents |
+| **MCP** | `/mcp/sse` | Primary interface — 45+ tools for Claude Desktop, ChatGPT, and buyer agents |
 | **A2A** | `/a2a/{agent}/jsonrpc` | Conversational JSON-RPC 2.0 for natural language queries |
-| **REST** | Standard HTTP | Operator/admin interface for setup and monitoring |
+| **REST** | `/api/v1/*` | Programmatic access — 70+ endpoints across 15 groups |
+| **Chat** | `/chat` | Web-based conversational interface for human buyers |
 
-→ [Protocol Documentation](https://iabtechlab.github.io/seller-agent/api/mcp/)
+> [Protocol Documentation](https://iabtechlab.github.io/seller-agent/api/mcp/)
 
 ## Architecture
 
 ```
-Buyer Agents ──→ MCP / A2A / REST ──→ FastAPI
-                                         │
-                    ┌────────────────────┼────────────────────┐
-                    ▼                    ▼                    ▼
-              CrewAI Agents       Media Kit Service    Pricing Engine
-              (3-level hierarchy)  (Tier-gated catalog)  (4-tier pricing)
-                    │                    │                    │
-                    ▼                    ▼                    ▼
-              Ad Server Layer      Storage (SQLite/Redis)   Event Bus
-              ┌──────────────┐     (products, packages,     (22 event types)
-              │ GAM    ✅    │      orders, sessions)
-              │ FreeWheel 🚧 │
+Claude Desktop / ChatGPT ──→ MCP SSE (/mcp/sse) ──┐
+Buyer Agents ──→ A2A / REST ───────────────────────┤
+                                                    ▼
+                                              FastAPI App
+                                                    │
+                    ┌───────────────────────────────┼──────────────────────┐
+                    ▼                               ▼                      ▼
+              CrewAI Agents                   Media Kit Service      Pricing Engine
+              (3-level hierarchy)             (Tier-gated catalog)   (4-tier + rate card)
+                    │                               │                      │
+                    ▼                               ▼                      ▼
+              Ad Server Layer               Storage (SQLite/PG)      Event Bus
+              ┌──────────────┐              (products, packages,     (16 event types)
+              │ GAM    ✅    │               orders, sessions,
+              │ FreeWheel ✅ │               deals, curators)
               │ Your Server* │
               └──────────────┘
-              * Pluggable via AdServerClient interface
+              * Pluggable via AdServerClient
+                    │
+              SSP Connectors
+              ┌──────────────────┐
+              │ PubMatic (MCP) ✅│
+              │ Index Exchange ✅│
+              │ Magnite (REST) ✅│
+              │ Your SSP*       │
+              └──────────────────┘
+              * Pluggable via SSPClient
 ```
 
 ### Agent Hierarchy
@@ -57,14 +75,72 @@ Buyer Agents ──→ MCP / A2A / REST ──→ FastAPI
 | **2** | Channel Specialists (Sonnet) | Display, Video, CTV, Mobile App, Native, Linear TV |
 | **3** | Functional Agents (Sonnet) | Pricing, Availability, Proposal Review, Upsell, Audience |
 
-→ [Architecture Documentation](https://iabtechlab.github.io/seller-agent/architecture/overview/)
+> [Architecture Documentation](https://iabtechlab.github.io/seller-agent/architecture/overview/)
+
+## Getting Started — Two-Phase Setup
+
+### For Developers (Claude Code / Terminal)
+
+Deploy the server, connect ad servers and SSPs, generate operator credentials:
+
+```bash
+git clone https://github.com/IABTechLab/seller-agent.git
+cd seller-agent
+pip install -e .
+
+# Configure .env (ad server, SSPs, API key)
+cp .env.example .env
+
+# Start
+uvicorn ad_seller.interfaces.api.main:app --port 8000
+```
+
+> [Developer Setup Guide](https://iabtechlab.github.io/seller-agent/guides/developer-setup/)
+
+### For Publishers (Claude Desktop)
+
+Add the seller agent to Claude Desktop and the setup wizard walks you through everything:
+
+```json
+// ~/Library/Application Support/Claude/claude_desktop_config.json
+{
+  "mcpServers": {
+    "seller-agent": {
+      "url": "http://localhost:8000/mcp/sse",
+      "headers": { "Authorization": "Bearer <your-operator-key>" }
+    }
+  }
+}
+```
+
+The wizard guides you through: publisher identity → agent behavior → media kit → pricing → approval gates → buyer registration → curators → launch.
+
+> [Claude Desktop Setup Guide](https://iabtechlab.github.io/seller-agent/guides/claude-desktop-setup/)
 
 ## Key Features
 
-### Media Kit & Inventory Discovery
-Three-layer package system (synced from ad server, publisher-curated, agent-assembled) with tier-gated access — unauthenticated buyers see price ranges, authenticated buyers see exact pricing and placements.
+### MCP Tools (45+ tools for Claude Desktop / ChatGPT)
 
-→ [Media Kit Guide](https://iabtechlab.github.io/seller-agent/guides/media-kit/)
+| Category | Tools | Examples |
+|----------|-------|---------|
+| Setup | 4 | `get_setup_status`, `health_check`, `get_config` |
+| Inventory | 4 | `list_products`, `sync_inventory`, `list_inventory` |
+| Media Kit | 3 | `list_packages`, `create_package`, `search_packages` |
+| Pricing | 4 | `get_rate_card`, `update_rate_card`, `get_pricing` |
+| Deals | 12 | `create_deal_from_template`, `push_deal_to_buyers`, `distribute_deal_via_ssp`, `migrate_deal`, `deprecate_deal`, `get_deal_lineage` |
+| Approvals | 3 | `list_pending_approvals`, `approve_or_reject`, `set_approval_gates` |
+| Buyer Agents | 4 | `list_buyer_agents`, `register_buyer_agent`, `set_agent_trust` |
+| Curators | 3 | `list_curators`, `create_curated_deal` |
+| SSPs | 3 | `list_ssps`, `distribute_deal`, `troubleshoot_deal` |
+| Admin | 5 | `create_api_key`, `list_api_keys`, `list_sessions` |
+
+### Deal Distribution (3 paths)
+
+| Path | How | Use Case |
+|------|-----|----------|
+| **Direct to buyer** | `POST /api/v1/deals/push` | IAB Deals API v1.0 HTTP push |
+| **Through ad server** | FreeWheel `book_deal()` or GAM | Exchange-level deal activation |
+| **Through SSP** | `POST /api/v1/deals/distribute` | PubMatic, Index Exchange, Magnite |
 
 ### Tiered Pricing
 
@@ -75,126 +151,70 @@ Three-layer package system (synced from ad server, publisher-curated, agent-asse
 | **Agency** | 10% | Yes | — |
 | **Advertiser** | 15% | Yes | Yes |
 
-→ [Pricing & Access Tiers](https://iabtechlab.github.io/seller-agent/guides/pricing-rules/)
+> [Pricing & Access Tiers](https://iabtechlab.github.io/seller-agent/guides/pricing-rules/)
 
-### Order Lifecycle
-Full state machine with 12 states and 20+ transitions, audit trail, and change request management.
+### Curator Support
 
-→ [Order Lifecycle](https://iabtechlab.github.io/seller-agent/state-machines/order-lifecycle/)
+Curators package and curate inventory on behalf of buyers. Agent Range is pre-registered at 10% fee.
 
-### Multi-Turn Negotiation
-Strategy-based negotiation engine (AGGRESSIVE, STANDARD, COLLABORATIVE, PREMIUM) with configurable concession limits per buyer tier.
+- `POST /api/v1/deals/curated` — create deals with curator overlay (base CPM + curator fee)
+- Curator appears as a node in the deal's schain
+- `GET /api/v1/curators` — list registered curators
 
-→ [Negotiation Protocol](https://iabtechlab.github.io/seller-agent/integration/negotiation/)
+### Scheduled Inventory Sync
 
-## Quick Start
-
-### Install
-
-```bash
-git clone https://github.com/IABTechLab/seller-agent.git
-cd seller-agent
-pip install -e .
+```env
+INVENTORY_SYNC_ENABLED=true
+INVENTORY_SYNC_INTERVAL_MINUTES=60
 ```
 
-### Configure
+Plus manual trigger, incremental sync with watermarks, and inventory type overrides.
 
-```bash
-cp .env.example .env
+### SSP Connectors
+
+```env
+SSP_CONNECTORS=pubmatic,index_exchange
+SSP_ROUTING_RULES=ctv:pubmatic,display:index_exchange
+PUBMATIC_MCP_URL=https://mcp.pubmatic.com/sses
+INDEX_EXCHANGE_API_URL=https://api.indexexchange.com
 ```
 
-Key settings:
+### Ad Server Support
 
-```bash
-# LLM — set the API key for your chosen provider
-ANTHROPIC_API_KEY=sk-ant-api03-xxxxx        # For Anthropic (default)
-# OPENAI_API_KEY=sk-xxxxx                   # For OpenAI / Azure
-# COHERE_API_KEY=xxxxx                      # For Cohere
-SELLER_ORGANIZATION_ID=my-publisher
-SELLER_ORGANIZATION_NAME=My Publishing Company
+| Ad Server | Status | Config |
+|-----------|--------|--------|
+| Google Ad Manager | ✅ Supported | `AD_SERVER_TYPE=google_ad_manager` |
+| FreeWheel (Streaming Hub + Buyer Cloud) | ✅ Supported | `AD_SERVER_TYPE=freewheel` |
+| Custom | Pluggable | Implement `AdServerClient` ABC |
 
-# LLM model (uses litellm provider/model format — any provider works)
-DEFAULT_LLM_MODEL=anthropic/claude-sonnet-4-5-20250929
-# DEFAULT_LLM_MODEL=openai/gpt-4o          # OpenAI example
-# DEFAULT_LLM_MODEL=ollama/llama3           # Local Ollama example
-
-# Ad server (optional — falls back to mock inventory)
-GAM_ENABLED=false
-GAM_NETWORK_CODE=12345678
-GAM_JSON_KEY_PATH=/path/to/service-account.json
-
-# Storage
-STORAGE_TYPE=sqlite                          # sqlite, redis, or hybrid
-DATABASE_URL=sqlite:///./ad_seller.db
-# DATABASE_URL=postgresql+asyncpg://seller:seller@localhost:5432/ad_seller
-# REDIS_URL=redis://localhost:6379/0         # Required for hybrid mode
-```
-
-> **LLM Provider Flexibility:** The agent uses [litellm](https://docs.litellm.ai/) under the hood, supporting 100+ LLM providers (OpenAI, Azure, Cohere, Ollama, Vertex AI, Bedrock, etc.). Set `DEFAULT_LLM_MODEL` and `MANAGER_LLM_MODEL` using `provider/model-name` format and provide the matching API key. See the [Configuration Guide](https://iabtechlab.github.io/seller-agent/guides/configuration/) for details.
-
-→ [Full Configuration Reference](https://iabtechlab.github.io/seller-agent/guides/configuration/)
-
-### Run
-
-```bash
-uvicorn ad_seller.interfaces.api.main:app --reload --port 8001
-```
-
-### Verify
-
-```bash
-# Health check
-curl http://localhost:8001/health
-
-# Public media kit (no auth)
-curl http://localhost:8001/media-kit
-
-# Agent discovery
-curl http://localhost:8001/.well-known/agent.json
-```
-
-→ [Quickstart Guide](https://iabtechlab.github.io/seller-agent/getting-started/quickstart/)
-
-### Docker
-
-Run the full stack (app + PostgreSQL + Redis) with Docker Compose:
-
-```bash
-cd infra/docker
-docker compose up
-```
-
-→ [Deployment Guide](https://iabtechlab.github.io/seller-agent/guides/deployment/)
-
-## Publisher Setup
-
-1. [Configuration & Environment](https://iabtechlab.github.io/seller-agent/guides/configuration/)
-2. [Inventory Sync](https://iabtechlab.github.io/seller-agent/guides/inventory-sync/) — Connect GAM/FreeWheel
-3. [Media Kit](https://iabtechlab.github.io/seller-agent/guides/media-kit/) — Set up packages and featured items
-4. [Pricing & Access Tiers](https://iabtechlab.github.io/seller-agent/guides/pricing-rules/) — Configure buyer pricing
-5. [Approval & HITL](https://iabtechlab.github.io/seller-agent/guides/approval-rules/) — Set up approval gates
-6. [Buyer & Agent Management](https://iabtechlab.github.io/seller-agent/guides/agent-management/) — Manage API keys and trust
+FreeWheel publishers can choose `FREEWHEEL_INVENTORY_MODE=deals_only` (default) to only expose pre-configured deals, or `full` for all inventory.
 
 ## API Reference
 
-58 endpoints across 19 groups:
+70+ endpoints across 15 groups:
 
 | Group | Endpoints | Description |
 |-------|-----------|-------------|
 | Media Kit | 4 | Public inventory catalog (no auth) |
 | Packages | 7 | Tier-gated package CRUD |
-| Products | 5 | Product catalog management |
-| Quotes | 2 | Quote creation and retrieval |
+| Products | 5 | Product catalog + inventory type overrides |
+| Quotes | 2 | Non-binding price quotes (IAB Deals API) |
+| Deal Booking | 12 | Deals, from-template, push, distribute, migrate, deprecate, lineage, export |
 | Proposals | 6 | Proposal lifecycle + counter-offers |
 | Orders | 8 | Order CRUD + state transitions |
-| Change Requests | 5 | CR lifecycle management |
+| Change Requests | 5 | Post-deal modification requests |
+| Supply Chain | 1 | sellers.json-like self-description |
+| Deal Performance | 1 | Delivery metrics |
+| Bulk Operations | 1 | Batch deal create/update/cancel |
+| Curators | 4 | Curator registration + curated deals |
 | Sessions | 4 | Multi-turn session persistence |
 | Authentication | 3 | API key management |
-| Agent Registry | 4 | Agent trust management |
-| MCP | 3 | MCP server interface |
-| A2A | 2 | Agent-to-Agent JSON-RPC |
+| Agent Registry | 5 | Agent trust + discovery |
+| Pricing | 3 | Rate card + pricing calculation |
+| Inventory Sync | 3 | Scheduler status, trigger, watermark |
+| Core | 2 | Health check + root |
 
-→ [Full API Reference](https://iabtechlab.github.io/seller-agent/api/overview/)
+> [Full API Reference](https://iabtechlab.github.io/seller-agent/api/overview/)
 
 ## Development
 
@@ -202,7 +222,7 @@ docker compose up
 # Install dev dependencies
 pip install -e ".[dev]"
 
-# Run tests (393 tests)
+# Run tests
 ANTHROPIC_API_KEY=test pytest tests/ -v
 
 # Lint

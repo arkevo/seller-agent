@@ -2,7 +2,18 @@
 
 Step-by-step guide for publishers deploying the IAB Tech Lab Seller Agent.
 
-## Setup Checklist
+## Recommended: Interactive Setup Wizard
+
+The fastest way to set up your seller agent is the **interactive setup wizard** via Claude Desktop. It walks you through every configuration step conversationally.
+
+1. **Developer** runs [Developer Setup](developer-setup.md) in Claude Code — deploys server, connects ad server + SSPs, generates credentials
+2. **Publisher ops** adds the config to [Claude Desktop](claude-desktop-setup.md) — the wizard auto-launches and guides through business setup
+
+> See [Claude Desktop Setup Guide](claude-desktop-setup.md) for the full walkthrough.
+
+## Manual Setup Checklist
+
+If you prefer to configure manually (or need reference for what the wizard does):
 
 1. [Configuration & Environment](configuration.md) -- Set env vars, connect your ad server
 2. [Inventory Sync](inventory-sync.md) -- Connect GAM/FreeWheel, sync your inventory
@@ -11,21 +22,14 @@ Step-by-step guide for publishers deploying the IAB Tech Lab Seller Agent.
 5. [Approval & Human-in-the-Loop](approval-rules.md) -- Set up approval gates for deals
 6. [Buyer & Agent Management](agent-management.md) -- Manage API keys, agent trust, buyer access
 
-## Current Status
-
-!!! info "Alpha Release"
-    The seller agent is in active development. Some configuration is done via
-    environment variables and code-level defaults rather than runtime APIs.
-    This guide documents what works today and notes planned improvements.
-    See [PROGRESS.md](https://github.com/IABTechLab/seller-agent/blob/main/.beads/PROGRESS.md) for current roadmap status.
-
 ## Prerequisites
 
 Before starting, ensure you have:
 
 - **Python 3.11+** installed
 - An **Anthropic API key** (`ANTHROPIC_API_KEY`) for the LLM-powered specialist agents
-- (Optional) A **Google Ad Manager** network code and service account key for live inventory sync
+- (Optional) **Google Ad Manager** credentials or **FreeWheel** MCP URL for live inventory sync
+- (Optional) **SSP API keys** for PubMatic, Index Exchange, or Magnite
 - (Optional) A public URL for agent discovery if participating in the IAB AAMP ecosystem
 
 ## Architecture Overview

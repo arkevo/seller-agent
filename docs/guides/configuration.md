@@ -37,14 +37,36 @@ with case-insensitive variable names.
 | `GAM_APPLICATION_NAME` | `str` | `"AdSellerSystem"` | Application name for GAM API requests |
 | `GAM_API_VERSION` | `str` | `"v202411"` | GAM SOAP API version |
 | `GAM_DEFAULT_TRAFFICKER_ID` | `str` | `None` | Default trafficker user ID for order creation |
-| `FREEWHEEL_API_URL` | `str` | `None` | FreeWheel API URL |
-| `FREEWHEEL_API_KEY` | `str` | `None` | FreeWheel API key |
+| `FREEWHEEL_ENABLED` | `bool` | `false` | Feature flag to enable FreeWheel integration |
+| `FREEWHEEL_NETWORK_ID` | `str` | `None` | Publisher network/account ID in FreeWheel |
+| `FREEWHEEL_INVENTORY_MODE` | `str` | `"deals_only"` | `"deals_only"` (only pre-configured deals) or `"full"` (all inventory) |
+| `FREEWHEEL_SH_MCP_URL` | `str` | `None` | Streaming Hub MCP endpoint URL |
+| `FREEWHEEL_SH_USERNAME` | `str` | `None` | Streaming Hub auth (TBD with FreeWheel team) |
+| `FREEWHEEL_SH_PASSWORD` | `str` | `None` | Streaming Hub auth (TBD with FreeWheel team) |
+| `FREEWHEEL_BC_MCP_URL` | `str` | `None` | Buyer Cloud MCP endpoint URL (for PG deals) |
+| `FREEWHEEL_BC_CLIENT_ID` | `str` | `None` | Buyer Cloud OAuth client ID |
+| `FREEWHEEL_BC_CLIENT_SECRET` | `str` | `None` | Buyer Cloud OAuth client secret |
 
-!!! warning "Planned Feature"
-    FreeWheel integration is declared in configuration but not yet functional.
-    Only Google Ad Manager is currently supported for live inventory sync.
-    See [Inventory Sync](inventory-sync.md) for details and
-    [PROGRESS.md](https://github.com/IABTechLab/seller-agent/blob/main/.beads/PROGRESS.md) for FreeWheel (seller-dcd) status.
+## SSP Connector Settings
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `SSP_CONNECTORS` | `str` | `""` | Comma-separated list of SSPs: `pubmatic,index_exchange,magnite` |
+| `SSP_ROUTING_RULES` | `str` | `""` | Routing rules: `ctv:pubmatic,display:index_exchange` |
+| `PUBMATIC_MCP_URL` | `str` | `None` | PubMatic MCP endpoint (e.g., `https://mcp.pubmatic.com/sses`) |
+| `PUBMATIC_API_KEY` | `str` | `None` | PubMatic API key |
+| `INDEX_EXCHANGE_API_URL` | `str` | `None` | Index Exchange REST API URL |
+| `INDEX_EXCHANGE_API_KEY` | `str` | `None` | Index Exchange API key |
+| `MAGNITE_API_URL` | `str` | `None` | Magnite REST API URL |
+| `MAGNITE_API_KEY` | `str` | `None` | Magnite API key |
+
+## Inventory Sync Settings
+
+| Variable | Type | Default | Description |
+|----------|------|---------|-------------|
+| `INVENTORY_SYNC_ENABLED` | `bool` | `false` | Enable periodic background inventory sync |
+| `INVENTORY_SYNC_INTERVAL_MINUTES` | `int` | `60` | How often to sync (minutes) |
+| `INVENTORY_SYNC_INCLUDE_ARCHIVED` | `bool` | `false` | Include archived ad units in sync |
 
 ## LLM Configuration
 

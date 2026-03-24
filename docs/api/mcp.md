@@ -1,80 +1,149 @@
 # MCP (Model Context Protocol)
 
-MCP is the **primary agentic interface** for the seller agent. Buyer agents call seller tools directly through structured, typed tool calls over MCP. This is the preferred protocol for automated workflows where the buyer agent knows exactly which operation it needs.
+MCP is the **primary interface** for the seller agent. Publishers manage their agent from Claude Desktop or ChatGPT via 45+ MCP tools. Buyer agents also call seller tools through MCP for automated workflows.
 
-## Endpoints
+## Connection
 
 | Endpoint | Method | Description |
 |----------|--------|-------------|
-| `/mcp/sse` | GET | Streamable HTTP transport (SSE) for persistent tool sessions |
-| `/mcp/tools` | GET | Tool discovery --- lists all available tools and their schemas |
-| `/mcp/call` | POST | Execute a tool call with typed arguments |
+| `/mcp/sse` | GET | SSE transport for persistent MCP sessions |
 
-## Available Tools
+### Claude Desktop Configuration
 
-The seller agent exposes the following tools via MCP. Each maps to a core seller operation:
+```json
+{
+  "mcpServers": {
+    "seller-agent": {
+      "url": "https://your-server.example.com/mcp/sse",
+      "headers": {
+        "Authorization": "Bearer <operator-api-key>"
+      }
+    }
+  }
+}
+```
+
+See the [Claude Desktop Setup Guide](../guides/claude-desktop-setup.md) for full instructions.
+
+## Available Tools (45+)
+
+### Setup & Status
 
 | Tool | Description |
 |------|-------------|
-| `list_products` | Browse the product catalog with optional filters |
-| `get_product` | Get full details for a specific product |
-| `get_pricing` | Tiered pricing calculation with buyer context (tier, volume, deal type) |
-| `check_availability` | Check inventory avails for a product, date range, and impression volume |
-| `create_proposal` | Submit a proposal for seller review |
-| `create_order` | Create an order from an accepted proposal |
-| `create_line_item` | Add line items to an existing order |
-| `book_programmatic_guaranteed` | Book a Programmatic Guaranteed (PG) deal directly |
-| `create_pmp_deal` | Create a Private Marketplace (PMP) deal and return a Deal ID |
-| `get_deal_status` | Check the status of an existing deal |
-| `request_quote` | Request a non-binding price quote (IAB Deals API) |
-| `book_deal` | Book a deal from an accepted quote (IAB Deals API) |
+| `get_setup_status` | Check what's configured vs missing — triggers setup wizard on first run |
+| `health_check` | System health — storage, ad server, SSPs |
+| `get_config` | Current configuration summary (no secrets) |
+| `set_publisher_identity` | Set publisher name, domain, org ID |
+| `list_agents` | Show the 3-level agent hierarchy and their roles |
+
+### Inventory & Media Kit
+
+| Tool | Description |
+|------|-------------|
+| `list_products` | Browse the product catalog |
+| `list_inventory` | List raw inventory from ad server |
+| `sync_inventory` | Trigger inventory sync from ad server (GAM or FreeWheel) |
+| `get_sync_status` | Check sync scheduler status |
+| `list_packages` | Browse media kit packages |
+| `create_package` | Create a curated package |
+
+### Pricing
+
+| Tool | Description |
+|------|-------------|
+| `get_rate_card` | Current rate card (base CPMs by inventory type) |
+| `update_rate_card` | Update rate card entries |
+| `get_pricing` | Calculate tiered price for a product with buyer context |
+
+### Deal Operations
+
+| Tool | Description |
+|------|-------------|
+| `request_quote` | Request a non-binding price quote |
+| `create_deal_from_template` | One-step deal creation (no quote needed) |
+| `create_curated_deal` | Deal with curator overlay (base CPM + curator fee) |
+| `push_deal_to_buyers` | IAB Deals API v1.0 push to buyer endpoints |
+| `distribute_deal_via_ssp` | Route deal through SSP (PubMatic, Index Exchange) |
+| `get_deal_performance` | Delivery and performance metrics |
+| `migrate_deal` | Replace a deal with lineage tracking |
+| `deprecate_deal` | Sunset a deal with reason and optional replacement |
+| `get_deal_lineage` | Walk the deal evolution chain |
+| `export_deals` | Export in DSP format (TTD, DV360, Amazon, Xandr) |
+| `bulk_deal_operations` | Batch create/update/cancel |
+| `troubleshoot_deal` | SSP diagnostics for underperforming deals |
+
+### Orders & Approvals
+
+| Tool | Description |
+|------|-------------|
+| `list_orders` | List orders and states |
+| `transition_order` | Transition order to new state |
+| `list_pending_approvals` | Show approval requests waiting for decision |
+| `approve_or_reject` | Submit approval decision (approve/reject/counter) |
+| `set_approval_gates` | Configure which flows require approval |
+
+### Buyer Agent Management
+
+| Tool | Description |
+|------|-------------|
+| `list_buyer_agents` | Show registered buyer agents and trust levels |
+| `register_buyer_agent` | Register a buyer agent by URL |
+| `set_agent_trust` | Set trust level (unknown/registered/approved/preferred/blocked) |
+
+### SSP & Supply Chain
+
+| Tool | Description |
+|------|-------------|
+| `list_ssps` | Show configured SSP connectors and routing rules |
+| `get_supply_chain` | Seller identity and schain (sellers.json format) |
+| `list_curators` | Available curators (Agent Range pre-registered) |
+
+### API Keys
+
+| Tool | Description |
+|------|-------------|
+| `create_api_key` | Create an API key for a buyer or agent |
+| `list_api_keys` | List active keys |
+| `revoke_api_key` | Revoke a key |
 
 ## Example Tool Call
 
 ```json
 {
-  "name": "get_pricing",
+  "name": "create_deal_from_template",
   "arguments": {
-    "product_id": "premium-video",
-    "buyer_tier": "agency",
-    "volume": 5000000
+    "deal_type": "PD",
+    "product_id": "premium-ctv",
+    "max_cpm": 35.0,
+    "impressions": 5000000,
+    "flight_start": "2026-04-01",
+    "flight_end": "2026-06-30"
   }
 }
 ```
 
-The response is a typed JSON object with the pricing breakdown, including base CPM, tier discount, volume discount, and effective CPM.
-
 ## When to Use MCP
 
-MCP is the right choice when the buyer agent:
-
-- Knows exactly which operation to perform (e.g., check availability, book a deal)
-- Needs deterministic, structured responses
-- Is running an automated workflow without human intervention
-- Wants the fastest possible execution path
+- **Publishers**: Manage your seller agent from Claude Desktop — setup, deals, pricing, approvals
+- **Buyer agents**: Automated deal workflows — structured, deterministic, fastest path
+- **ChatGPT users**: Same tools available via MCP connection
 
 ## Protocol Comparison
 
 | | MCP | A2A | REST API |
 |---|-----|-----|----------|
 | **Interface style** | Structured tool calls | Natural language (JSON-RPC) | HTTP request/response |
-| **Best for** | Automated agent workflows | Discovery, negotiation, complex queries | Human operators, dashboards |
+| **Best for** | Publisher operations, agent workflows | Discovery, negotiation, complex queries | Dashboards, programmatic access |
 | **Response format** | Typed tool results | Mixed text + structured data | JSON |
-| **Multi-turn** | Stateless per call | Yes, via `contextId` | Stateless |
 | **Speed** | Fastest | Moderate (LLM processing) | Fast |
 | **Determinism** | Fully deterministic | Non-deterministic (LLM) | Fully deterministic |
 | **Transport** | SSE (Streamable HTTP) | HTTP POST (JSON-RPC 2.0) | HTTP verbs |
 
-## MCP Server Examples
-
-The repository includes two MCP server examples:
-
-- **`examples/publisher_gam_server.py`** --- Publisher seller agent with Google Ad Manager integration. Exposes CTV inventory via MCP, books PG lines in GAM, and creates PMP deals.
-- **`examples/dsp_server.py`** --- DSP seller agent. Receives Deal IDs from buyers, activates deals on campaigns, and books performance and mobile app campaigns.
-
 ## See Also
 
-- [A2A Protocol](a2a.md) --- conversational agent-to-agent interface
-- [Agent Discovery](agent-discovery.md) --- how buyer agents discover this seller
-- [API Overview](overview.md) --- full REST API reference
-- [Buyer Agent MCP Client](https://iabtechlab.github.io/buyer-agent/) --- buyer-side MCP client documentation
+- [Claude Desktop Setup Guide](../guides/claude-desktop-setup.md) — publisher setup instructions
+- [ChatGPT Setup Guide](../guides/chatgpt-setup.md) — OpenAI configuration
+- [Developer Setup Guide](../guides/developer-setup.md) — infrastructure setup
+- [A2A Protocol](a2a.md) — conversational agent-to-agent interface
+- [API Overview](overview.md) — full REST API reference

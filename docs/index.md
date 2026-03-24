@@ -1,48 +1,77 @@
 # Ad Seller Agent
 
-The Ad Seller Agent is an **IAB OpenDirect 2.1 compliant** programmatic advertising seller system. It enables automated ad selling through a RESTful API, supporting the full lifecycle from product discovery through deal execution and post-deal modifications.
+The Ad Seller Agent is an **IAB OpenDirect 2.1 compliant** programmatic advertising seller system. It enables automated ad selling through AI agents, supporting the full lifecycle from inventory discovery through deal execution, SSP distribution, and post-deal management.
+
+**Manage everything from Claude Desktop** — the seller agent exposes 45+ MCP tools for conversational setup and day-to-day operations. An interactive setup wizard walks publishers through configuration step by step.
 
 Part of the IAB Tech Lab Agent Ecosystem --- see also the [Buyer Agent](https://iabtechlab.github.io/buyer-agent/).
 
 ## Access Methods
 
-The seller agent supports three protocols for different use cases:
-
 | Protocol | Endpoint | Best For |
 |----------|----------|----------|
-| **[MCP](api/mcp.md)** | `/mcp/sse` | Automated agent workflows --- structured tool calls, deterministic |
-| **[A2A](api/a2a.md)** | `/a2a/seller/jsonrpc` | Conversational agent interactions --- natural language, multi-turn |
-| **[REST API](api/overview.md)** | Various endpoints | Human operators, dashboards, non-agent clients |
-
-For agent-to-agent communication, MCP is the primary protocol. A2A adds conversational capabilities for discovery and negotiation.
+| **[MCP](api/mcp.md)** | `/mcp/sse` | Primary interface — 45+ tools for Claude Desktop, ChatGPT, and buyer agents |
+| **[A2A](api/a2a.md)** | `/a2a/seller/jsonrpc` | Conversational agent interactions — natural language, multi-turn |
+| **[REST API](api/overview.md)** | `/api/v1/*` | Programmatic access — 70+ endpoints across 15 groups |
 
 ## Key Capabilities
 
-- **58 endpoints** across **19 categories** covering the complete ad selling workflow
-- Tiered pricing engine with buyer-context-aware discounts
-- Multi-round automated negotiation with configurable strategies
-- Formal order state machine with 12 states and 20 transitions
-- Post-deal change request management with severity-based routing
-- Event bus for full observability of system activity
-- Agent-to-agent (A2A) discovery and trust management
-- Human-in-the-loop approval gates for high-value decisions
+- **45+ MCP tools** for Claude Desktop / ChatGPT — interactive setup wizard + full operations
+- **70+ REST endpoints** across 15 categories covering the complete ad selling workflow
+- **Pluggable ad server** support — Google Ad Manager and FreeWheel (Streaming Hub + Buyer Cloud)
+- **Multi-SSP distribution** — PubMatic (MCP), Index Exchange (REST), Magnite (REST) with routing rules
+- **IAB Deals API v1.0** — standardized deal push to buyer DSPs
+- **Curator support** — Agent Range pre-registered, fee-based curation with schain
+- **Tiered pricing engine** with rate card API and buyer-context-aware discounts
+- **Multi-round automated negotiation** with configurable strategies
+- **Order state machine** with 12 states and 20 transitions
+- **Deal lifecycle** — create, migrate, deprecate, and track lineage across deal evolution
+- **Scheduled inventory sync** with incremental change detection and type overrides
+- **Human-in-the-loop approval gates** with configurable guard conditions
+- **Supply chain transparency** — sellers.json parsing and OpenRTB schain in deal responses
+- **Event bus** for full observability of system activity (16 event types)
+- **Agent-to-agent discovery** and trust management via IAB AAMP registry
+
+## Getting Started
+
+### Recommended: Interactive Setup Wizard
+
+1. **Developer** deploys the server and connects ad server + SSPs → [Developer Setup](guides/developer-setup.md)
+2. **Publisher ops** adds Claude Desktop config → wizard guides through business setup → [Claude Desktop Setup](guides/claude-desktop-setup.md)
+
+### Manual Setup
+
+- [Quickstart](getting-started/quickstart.md) — install, run, and make your first API call
+- [Publisher Setup Guide](guides/publisher-setup.md) — step-by-step manual configuration
 
 ## Documentation Sections
 
-### Getting Started
+### AI Assistant Setup
 
-- [Quickstart](getting-started/quickstart.md) --- install, run, and make your first API call
+- [Claude Desktop Setup](guides/claude-desktop-setup.md) — publisher setup via interactive wizard
+- [ChatGPT / Codex Setup](guides/chatgpt-setup.md) — OpenAI configuration
+- [Developer Setup](guides/developer-setup.md) — infrastructure and credential setup
 
 ### API Reference
 
-- [API Overview](api/overview.md) --- all 58 endpoints grouped by tag
-- [MCP Protocol](api/mcp.md) --- primary agentic interface (structured tool calls)
+- [API Overview](api/overview.md) --- all 70+ endpoints grouped by tag
+- [MCP Protocol](api/mcp.md) --- 45+ MCP tools for Claude Desktop and buyer agents
 - [A2A Protocol](api/a2a.md) --- conversational agent-to-agent interface
 - [Agent Discovery](api/agent-discovery.md) --- `/.well-known/agent.json` and trust registry
 - [Authentication](api/authentication.md) --- API keys, access tiers, and agent trust
 - [Quotes](api/quotes.md) --- non-binding price quotes
 - [Orders](api/orders.md) --- order creation and state machine transitions
 - [Change Requests](api/change-requests.md) --- post-deal modifications
+
+### Publisher Guide
+
+- [Publisher Setup](guides/publisher-setup.md) --- setup checklist (or use the wizard)
+- [Configuration](guides/configuration.md) --- all environment variables
+- [Inventory Sync](guides/inventory-sync.md) --- GAM, FreeWheel, scheduled sync, overrides
+- [Media Kit](guides/media-kit.md) --- packages, tiers, featured items
+- [Pricing & Access Tiers](guides/pricing-rules.md) --- rate card, discounts, yield optimization
+- [Approval & HITL](guides/approval-rules.md) --- approval gates and guard conditions
+- [Buyer & Agent Management](guides/agent-management.md) --- API keys, trust, registration
 
 ### Architecture
 
@@ -57,9 +86,4 @@ For agent-to-agent communication, MCP is the primary protocol. A2A adds conversa
 
 ### Event Bus
 
-- [Event Bus Overview](event-bus/overview.md) --- all event types and usage
-
-### Integration
-
-- [Buyer Agent Integration](integration/buyer-agent.md) --- discovery, auth, and transaction flows
-- [Negotiation Protocol](integration/negotiation.md) --- multi-round negotiation mechanics
+- [Event Bus Overview](event-bus/overview.md) --- all 16 event types and usage

@@ -108,52 +108,88 @@ The flow also creates default product definitions for finer-grained inventory:
 
 ---
 
-## Option C: FreeWheel (Planned)
+## Option C: FreeWheel
 
-!!! warning "Planned Feature"
-    FreeWheel integration (seller-dcd) is in the roadmap. The `FREEWHEEL_API_URL`
-    and `FREEWHEEL_API_KEY` settings are declared in configuration but the
-    integration client is not yet implemented. Currently only GAM is supported
-    for live inventory sync.
-    Track progress: [PROGRESS.md](https://github.com/IABTechLab/seller-agent/blob/main/.beads/PROGRESS.md).
+Set `AD_SERVER_TYPE=freewheel` to sync inventory from FreeWheel Streaming Hub:
 
----
-
-## Manual Package Sync
-
-You can trigger an inventory re-sync at any time via the API:
-
-```bash
-curl -X POST http://localhost:8000/packages/sync
+```env
+AD_SERVER_TYPE=freewheel
+FREEWHEEL_ENABLED=true
+FREEWHEEL_SH_MCP_URL=https://shmcp.freewheel.com
+FREEWHEEL_NETWORK_ID=your-network-id
+FREEWHEEL_INVENTORY_MODE=deals_only  # or "full"
 ```
 
-This re-runs the `ProductSetupFlow.sync_from_ad_server()` step, fetching fresh
-data from your configured ad server (or regenerating mock data if none is configured).
+**Inventory mode:**
+
+- `deals_only` (default) — only exposes pre-configured deals/packages the publisher set up for agentic selling
+- `full` — exposes all available inventory to the agent
 
 ---
 
-## Current Limitations
+## Scheduled Periodic Sync
 
-!!! note "Sync Limitations"
-    The current inventory sync has the following constraints:
+Enable background inventory sync at a configurable interval:
 
-    - **No scheduled re-sync** -- Sync runs at flow startup or on manual trigger.
-      There is no built-in cron or periodic sync.
-    - **Automatic classification only** -- Ad unit type is inferred from the name.
-      There is no manual mapping or override mechanism.
-    - **Estimated CPMs** -- Base CPMs are estimated by inventory type, not pulled
-      from GAM rate cards or historical data.
-    - **No incremental sync** -- Each sync is a full re-import. Changed or
-      removed ad units are not detected differentially.
-    - **Floor prices are computed** -- Floor = 70% of base CPM. There is no
-      per-ad-unit floor configuration.
+```env
+INVENTORY_SYNC_ENABLED=true
+INVENTORY_SYNC_INTERVAL_MINUTES=60
+INVENTORY_SYNC_INCLUDE_ARCHIVED=false
+```
 
-    Planned improvements:
+The sync runs automatically when the server starts and repeats at the configured interval.
 
-    - Scheduled periodic sync (configurable interval)
-    - Manual inventory type mapping / override API
-    - Rate card integration for accurate base CPMs
-    - Incremental sync with change detection
-    - FreeWheel ad server support
+## Manual Sync Trigger
 
-    See [PROGRESS.md](https://github.com/IABTechLab/seller-agent/blob/main/.beads/PROGRESS.md) for roadmap status.
+Trigger a sync at any time via API or MCP:
+
+```bash
+# REST API
+curl -X POST http://localhost:8000/api/v1/inventory-sync/trigger
+
+# With incremental mode (only changes since last sync)
+curl -X POST "http://localhost:8000/api/v1/inventory-sync/trigger?incremental=true"
+```
+
+Or via Claude Desktop: *"Sync my inventory"*
+
+## Sync Status & Watermarks
+
+```bash
+# Check scheduler status
+curl http://localhost:8000/api/v1/inventory-sync/status
+
+# Check last sync watermark (for incremental sync)
+curl http://localhost:8000/api/v1/inventory-sync/watermark
+```
+
+## Inventory Type Overrides
+
+Publishers can manually override the auto-detected inventory type for any product:
+
+```bash
+# Set a product's inventory type
+curl -X POST http://localhost:8000/api/v1/products/my-product-id/inventory-type \
+  -H "Content-Type: application/json" \
+  -d '{"product_id": "my-product-id", "inventory_type": "ctv", "reason": "Misclassified as display"}'
+
+# Check current override
+curl http://localhost:8000/api/v1/products/my-product-id/inventory-type
+
+# Remove override (revert to auto-detected)
+curl -X DELETE http://localhost:8000/api/v1/products/my-product-id/inventory-type
+```
+
+## Rate Card Integration
+
+Set base CPMs by inventory type so the pricing engine starts with accurate floor prices:
+
+```bash
+# Get current rate card
+curl http://localhost:8000/api/v1/rate-card
+
+# Update rate card
+curl -X PUT http://localhost:8000/api/v1/rate-card \
+  -H "Content-Type: application/json" \
+  -d '[{"inventory_type": "ctv", "base_cpm": 40.0}, {"inventory_type": "display", "base_cpm": 12.0}]'
+```
