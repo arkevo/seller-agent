@@ -57,7 +57,7 @@ For seller agents running on `localhost`:
 
 ## Step 2: First-Run Setup Wizard
 
-When you first connect, the seller agent detects that business setup isn't complete and offers to walk you through it:
+Type `/setup` to begin the guided configuration wizard.
 
 > **Claude**: "Welcome! Your seller agent is deployed and connected to your ad server. Let's set up the business configuration. I'll walk you through 8 steps — you can skip any step to accept defaults."
 
@@ -108,6 +108,24 @@ When you first connect, the seller agent detects that business setup isn't compl
 ### Step 8: Review & Launch
 
 > **Claude**: "Here's your complete setup: [summary]. Everything looks good. Your seller agent is live!"
+
+## Available Slash Commands
+
+Once the seller agent is connected, Claude Desktop recognizes the following slash commands:
+
+| Command | What it does |
+|---------|-------------|
+| `/setup` | Run the guided setup wizard (first-time or reconfigure) |
+| `/status` | Check configuration and system health |
+| `/inventory` | See your products and media kit packages |
+| `/deals` | Full report on all deal activity |
+| `/queue` | Inbound items waiting for your action |
+| `/new-deal` | Create a new deal step by step |
+| `/configure` | Manage event bus flows, approval gates, guard conditions |
+| `/buyers` | See which buyer agents are accessing your inventory |
+| `/help` | List all available capabilities |
+
+---
 
 ## Day-to-Day Operations
 
