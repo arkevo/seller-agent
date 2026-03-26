@@ -1,3 +1,9 @@
+> **Implementation Status (2026-03-26):**
+> - Phase 1 (Read-Only): ✅ Complete
+> - Phase 2 (PD/PA Deal Booking): ✅ Complete (with auth stubs)
+> - Phase 3 (PG Cross-MCP): ⏳ Blocked — awaiting FreeWheel auth mechanism (seller-91t)
+> - See `.beads/PROGRESS.md` for current status
+
 # FreeWheel Dual-MCP Integration — Seller Agent Architecture & Tool Requirements
 
 **From:** IAB Tech Lab Seller Agent Team
