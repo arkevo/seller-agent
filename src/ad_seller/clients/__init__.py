@@ -15,6 +15,7 @@ from .ad_server_base import (
     BookingResult,
     get_ad_server_client,
 )
+from .csv_adapter import CSVAdServerClient
 from .freewheel_adapter import FreeWheelAdServerClient
 from .gam_rest_client import GAMRestClient
 from .gam_soap_client import GAMSoapClient
@@ -50,6 +51,8 @@ __all__ = [
     "AdServerAudienceSegment",
     "BookingResult",
     "get_ad_server_client",
+    # CSV adapter
+    "CSVAdServerClient",
     # FreeWheel adapter
     "FreeWheelAdServerClient",
     # SSP abstraction

@@ -65,7 +65,8 @@ class Settings(BaseSettings):
     inventory_sync_include_archived: bool = False  # Include archived ad units
 
     # Ad Server Configuration
-    ad_server_type: str = "google_ad_manager"  # google_ad_manager, freewheel
+    ad_server_type: str = "google_ad_manager"  # google_ad_manager, freewheel, csv
+    csv_data_dir: str = "./data/csv/samples/ctv_streaming"  # Path to CSV data directory
 
     # Google Ad Manager (GAM) Configuration
     gam_enabled: bool = False  # Feature flag to enable GAM integration

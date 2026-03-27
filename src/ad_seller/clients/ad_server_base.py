@@ -25,6 +25,7 @@ class AdServerType(str, Enum):
 
     GOOGLE_AD_MANAGER = "google_ad_manager"
     FREEWHEEL = "freewheel"
+    CSV = "csv"
 
 
 class OrderStatus(str, Enum):
@@ -307,9 +308,9 @@ def get_ad_server_client(ad_server_type: Optional[str] = None) -> AdServerClient
     Returns:
         An AdServerClient instance (not yet connected — call connect() or use as async context manager).
     """
-    if ad_server_type is None:
-        from ..config import get_settings
+    from ..config import get_settings
 
+    if ad_server_type is None:
         ad_server_type = get_settings().ad_server_type
 
     if ad_server_type == "google_ad_manager":
@@ -320,5 +321,9 @@ def get_ad_server_client(ad_server_type: Optional[str] = None) -> AdServerClient
         from .freewheel_adapter import FreeWheelAdServerClient
 
         return FreeWheelAdServerClient()
+    elif ad_server_type == "csv":
+        from .csv_adapter import CSVAdServerClient
+
+        return CSVAdServerClient(data_dir=get_settings().csv_data_dir)
     else:
         raise ValueError(f"Unsupported ad server type: {ad_server_type}")
