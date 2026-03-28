@@ -1,9 +1,9 @@
-> **V2 — Active Development**
-> See [PROGRESS.md](.beads/PROGRESS.md) for roadmap status (93% complete).
+> **V2 — Feature Complete**
+> 51/51 tasks closed. See [PROGRESS.md](.beads/PROGRESS.md) for full roadmap.
 
 # IAB Tech Lab — Seller Agent
 
-An AI-powered inventory management system for **publishers and SSPs** to automate programmatic direct sales using IAB OpenDirect 2.1 standards.
+An AI-powered inventory management system for **publishers and SSPs** to automate programmatic deal negotiation, booking, and distribution using IAB Tech Lab standards (OpenDirect 2.1, Deals API v1.0, sellers.json).
 
 **[Full Documentation →](https://iabtechlab.github.io/seller-agent/)**
 
@@ -18,9 +18,11 @@ An AI-powered inventory management system for **publishers and SSPs** to automat
 - **Push deals to buyers** via IAB Deals API v1.0 standardized push
 - **Manage orders** with a full state machine (draft → booked → delivering → complete)
 - **Human-in-the-loop** approval gates with configurable guard conditions
-- **Connect to ad servers** via a pluggable interface — GAM and FreeWheel supported
+- **Connect to ad servers** via a pluggable interface — GAM, FreeWheel, and CSV (demo/testing) supported
+- **Authenticate with FreeWheel** — SH (OAuth 2.0 ROPCG) + Buyer Cloud (Beeswax session cookie) with auto-reconnect
 - **Support curators** — Agent Range pre-registered, fee-based curation with schain
 - **Track deal lineage** — migration, deprecation, and full evolution chain
+- **Supply chain transparency** — sellers.json parsing with OpenRTB schain in deal responses
 
 ## Access Methods
 
@@ -53,6 +55,7 @@ Buyer Agents ──→ A2A / REST ───────────────�
               ┌──────────────┐              (products, packages,     (16 event types)
               │ GAM    ✅    │               orders, sessions,
               │ FreeWheel ✅ │               deals, curators)
+              │ CSV    ✅    │
               │ Your Server* │
               └──────────────┘
               * Pluggable via AdServerClient
@@ -185,9 +188,16 @@ INDEX_EXCHANGE_API_URL=https://api.indexexchange.com
 |-----------|--------|--------|
 | Google Ad Manager | ✅ Supported | `AD_SERVER_TYPE=google_ad_manager` |
 | FreeWheel (Streaming Hub + Buyer Cloud) | ✅ Supported | `AD_SERVER_TYPE=freewheel` |
+| CSV (testing/demo) | ✅ Supported | `AD_SERVER_TYPE=csv` |
 | Custom | Pluggable | Implement `AdServerClient` ABC |
 
-FreeWheel publishers can choose `FREEWHEEL_INVENTORY_MODE=deals_only` (default) to only expose pre-configured deals, or `full` for all inventory.
+**FreeWheel authentication:**
+- **Streaming Hub:** OAuth 2.0 ROPCG via `streaming_hub_login` MCP tool (7-day token TTL)
+- **Buyer Cloud:** Beeswax session cookie via `buyer_cloud_login` MCP tool (30-day TTL with `keep_logged_in`)
+- Auto-reconnect on session expiry for both SH and BC
+- Inventory mode: `FREEWHEEL_INVENTORY_MODE=deals_only` (default) exposes only pre-configured deals, or `full` for all inventory
+
+**CSV adapter:** Full CRUD with atomic writes and file locking — use for testing and demos without an ad server. Sample data included for CTV streaming and web display.
 
 ## API Reference
 
