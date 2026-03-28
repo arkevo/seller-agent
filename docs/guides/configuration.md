@@ -41,11 +41,12 @@ with case-insensitive variable names.
 | `FREEWHEEL_NETWORK_ID` | `str` | `None` | Publisher network/account ID in FreeWheel |
 | `FREEWHEEL_INVENTORY_MODE` | `str` | `"deals_only"` | `"deals_only"` (only pre-configured deals) or `"full"` (all inventory) |
 | `FREEWHEEL_SH_MCP_URL` | `str` | `None` | Streaming Hub MCP endpoint URL |
-| `FREEWHEEL_SH_USERNAME` | `str` | `None` | Streaming Hub auth (TBD with FreeWheel team) |
-| `FREEWHEEL_SH_PASSWORD` | `str` | `None` | Streaming Hub auth (TBD with FreeWheel team) |
-| `FREEWHEEL_BC_MCP_URL` | `str` | `None` | Buyer Cloud MCP endpoint URL (for PG deals) |
-| `FREEWHEEL_BC_CLIENT_ID` | `str` | `None` | Buyer Cloud OAuth client ID |
-| `FREEWHEEL_BC_CLIENT_SECRET` | `str` | `None` | Buyer Cloud OAuth client secret |
+| `FREEWHEEL_SH_USERNAME` | `str` | `None` | SH publisher account username (OAuth 2.0 ROPCG, 7-day token TTL) |
+| `FREEWHEEL_SH_PASSWORD` | `str` | `None` | SH publisher account password |
+| `FREEWHEEL_BC_MCP_URL` | `str` | `None` | Buyer Cloud MCP endpoint URL (for PG deals), e.g. `https://<buzz_key>.api.beeswax.com` |
+| `FREEWHEEL_BC_EMAIL` | `str` | `None` | Beeswax account email (session cookie auth, 100h/30-day TTL) |
+| `FREEWHEEL_BC_PASSWORD` | `str` | `None` | Beeswax account password |
+| `FREEWHEEL_BC_BUZZ_KEY` | `str` | `None` | Buzz API key (determines API hostname and cookie name) |
 
 ## SSP Connector Settings
 

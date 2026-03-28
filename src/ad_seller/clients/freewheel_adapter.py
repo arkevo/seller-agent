@@ -39,15 +39,22 @@ logger = logging.getLogger(__name__)
 
 
 # =============================================================================
-# Auth helpers (STUBS — real auth TBD with FreeWheel team)
+# Auth helpers
 # =============================================================================
 
 
 def _build_sh_auth_params(settings: Any) -> dict[str, str]:
-    """Build Streaming Hub auth params from settings.
+    """Build Streaming Hub MCP login params from settings.
 
-    TODO(freewheel-auth): Replace with real auth once FreeWheel team confirms
-    the SH MCP auth mechanism (API key, username/password, OAuth, etc.)
+    Auth mechanism: OAuth 2.0 Resource Owner Password Credentials Grant
+    (RFC 6749). The MCP ``streaming_hub_login`` tool wraps the token
+    exchange at ``https://api.freewheel.tv/auth/token``.  Tokens are
+    valid for 7 days; rate limit on the token endpoint is 3 req/s.
+
+    Required settings:
+        FREEWHEEL_SH_USERNAME — publisher account username
+        FREEWHEEL_SH_PASSWORD — publisher account password
+        FREEWHEEL_NETWORK_ID  — publisher network/account identifier
     """
     params: dict[str, str] = {}
     if settings.freewheel_sh_username:
@@ -60,23 +67,27 @@ def _build_sh_auth_params(settings: Any) -> dict[str, str]:
 
 
 def _build_bc_auth_params(settings: Any) -> dict[str, str]:
-    """Build Buyer Cloud auth params from settings.
+    """Build Buyer Cloud (Beeswax) MCP login params from settings.
 
-    TODO(freewheel-auth): Replace with real auth once FreeWheel team confirms
-    the BC MCP auth mechanism. Likely OAuth 2.0 client_credentials +
-    session login (email/password/buzz_key).
+    Auth mechanism: Session cookie via the Buzz REST API authenticate
+    endpoint at ``https://<buzz_key>.api.beeswax.com/rest/authenticate``.
+    The MCP ``buyer_cloud_login`` tool wraps this exchange.  Sessions
+    last 100 hours by default (30 days with ``keep_logged_in``).
+
+    Required settings:
+        FREEWHEEL_BC_EMAIL    — Beeswax account email
+        FREEWHEEL_BC_PASSWORD — Beeswax account password
+        FREEWHEEL_BC_BUZZ_KEY — Buzz API key (determines API hostname)
     """
     params: dict[str, str] = {}
-    if settings.freewheel_bc_client_id:
-        params["client_id"] = settings.freewheel_bc_client_id
-    if settings.freewheel_bc_client_secret:
-        params["client_secret"] = settings.freewheel_bc_client_secret
     if settings.freewheel_bc_email:
         params["email"] = settings.freewheel_bc_email
     if settings.freewheel_bc_password:
         params["password"] = settings.freewheel_bc_password
     if settings.freewheel_bc_buzz_key:
         params["buzz_key"] = settings.freewheel_bc_buzz_key
+    # Request extended session (30-day cookie) to reduce re-auth frequency
+    params["keep_logged_in"] = "true"
     return params
 
 
@@ -109,18 +120,20 @@ class FreeWheelAdServerClient(AdServerClient):
     async def connect(self) -> None:
         """Connect to FreeWheel Streaming Hub MCP (and BC if configured).
 
-        Authentication is two separate configs:
-        - Streaming Hub: publisher-side auth (TBD — confirm with FreeWheel team)
-        - Buyer Cloud: demand-side auth, likely OAuth 2.0 (TBD — confirm with FreeWheel team)
+        Authentication uses two separate credential sets:
 
-        These are separate credential sets — a publisher configures both if they
-        need full PG booking (SH + BC), or just SH for PD/PA deals.
+        - **Streaming Hub (SH):** OAuth 2.0 ROPCG via ``streaming_hub_login``
+          MCP tool.  Requires ``FREEWHEEL_SH_USERNAME``, ``FREEWHEEL_SH_PASSWORD``,
+          and ``FREEWHEEL_NETWORK_ID``.  Tokens are valid for 7 days.
 
-        TODO(freewheel-auth): FreeWheel team to confirm:
-        - SH auth mechanism (API key? username/password? OAuth?)
-        - BC auth mechanism (OAuth client_credentials? session login?)
-        - Whether SH login tool returns a session_id or uses header auth
-        - How publisher seats/accounts/networks are identified (network_id param?)
+        - **Buyer Cloud (BC):** Session cookie via ``buyer_cloud_login`` MCP
+          tool (wraps Beeswax ``/rest/authenticate``).  Requires
+          ``FREEWHEEL_BC_EMAIL``, ``FREEWHEEL_BC_PASSWORD``, and
+          ``FREEWHEEL_BC_BUZZ_KEY``.  Sessions last 100 h (30 days with
+          ``keep_logged_in``).
+
+        A publisher configures both for PG booking (SH + BC) or just SH for
+        PD/PA deals.
         """
         settings = self._get_settings()
 
@@ -130,7 +143,7 @@ class FreeWheelAdServerClient(AdServerClient):
                 "FREEWHEEL_SH_MCP_URL not configured. Set it to the Streaming Hub MCP endpoint."
             )
 
-        # --- Streaming Hub auth (STUB — real auth TBD with FreeWheel team) ---
+        # --- Streaming Hub auth (OAuth 2.0 ROPCG) ---
         sh_auth = _build_sh_auth_params(settings)
 
         await self._sh_client.connect(
@@ -144,7 +157,7 @@ class FreeWheelAdServerClient(AdServerClient):
             settings.freewheel_network_id or "default",
         )
 
-        # --- Buyer Cloud auth (STUB — real auth TBD with FreeWheel team) ---
+        # --- Buyer Cloud auth (Beeswax session cookie) ---
         bc_url = settings.freewheel_bc_mcp_url
         if bc_url:
             self._bc_client = FreeWheelMCPClient()
@@ -155,13 +168,35 @@ class FreeWheelAdServerClient(AdServerClient):
                 auth_params=bc_auth if bc_auth else None,
                 login_tool="buyer_cloud_login" if bc_auth else None,
             )
-            logger.info("Connected to Buyer Cloud")
+            logger.info("Connected to Buyer Cloud (buzz_key=%s)", settings.freewheel_bc_buzz_key or "default")
 
     async def disconnect(self) -> None:
         """Disconnect from FreeWheel MCP servers."""
         await self._sh_client.disconnect(logout_tool="streaming_hub_logout")
         if self._bc_client:
             await self._bc_client.disconnect(logout_tool="buyer_cloud_logout")
+
+    async def _reconnect_sh(self) -> None:
+        """Re-authenticate with Streaming Hub on session expiry."""
+        settings = self._get_settings()
+        sh_auth = _build_sh_auth_params(settings)
+        logger.info("Re-authenticating with Streaming Hub")
+        await self._sh_client.reconnect(
+            auth_params=sh_auth if sh_auth else None,
+            login_tool="streaming_hub_login" if sh_auth else None,
+        )
+
+    async def _reconnect_bc(self) -> None:
+        """Re-authenticate with Buyer Cloud on session expiry."""
+        if not self._bc_client:
+            return
+        settings = self._get_settings()
+        bc_auth = _build_bc_auth_params(settings)
+        logger.info("Re-authenticating with Buyer Cloud")
+        await self._bc_client.reconnect(
+            auth_params=bc_auth if bc_auth else None,
+            login_tool="buyer_cloud_login" if bc_auth else None,
+        )
 
     # =========================================================================
     # Inventory & Audiences (Streaming Hub)

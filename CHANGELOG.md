@@ -5,6 +5,12 @@ All notable changes to the IAB Tech Lab Seller Agent are documented here.
 ## [Unreleased]
 
 ### Added
+- FreeWheel authentication integration (seller-91t):
+  - Streaming Hub: OAuth 2.0 ROPCG via `streaming_hub_login` MCP tool (7-day token TTL)
+  - Buyer Cloud: Beeswax session cookie via `buyer_cloud_login` MCP tool (100h/30-day TTL)
+  - Auto-reconnect on session expiry for both SH and BC
+  - Connection validation via `reconnect()` method on MCP client
+- CSV ad server adapter with full CRUD and atomic writes (61 tests)
 - 9 MCP prompts (slash commands) for Claude Desktop/web (/setup, /status, /inventory, /deals, /queue, /new-deal, /configure, /buyers, /help)
 - 3 composite tools: get_inbound_queue, get_buyer_activity, list_configurable_flows
 - Comprehensive unit tests (86 new tests) and integration tests (38 new tests)
@@ -14,6 +20,7 @@ All notable changes to the IAB Tech Lab Seller Agent are documented here.
 ### Changed
 - Renamed "Deal Jockey" to "Deal Library" across codebase and documentation
 - Linted and formatted entire codebase with ruff
+- Removed `FREEWHEEL_BC_CLIENT_ID` and `FREEWHEEL_BC_CLIENT_SECRET` settings (Beeswax uses session cookie auth, not OAuth client_credentials)
 
 ### Fixed
 - Documentation tool count (41 MCP tools, not "45+")

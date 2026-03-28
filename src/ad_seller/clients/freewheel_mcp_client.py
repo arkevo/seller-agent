@@ -81,6 +81,26 @@ class FreeWheelMCPClient:
                 self._session_id = result["session_id"]
                 logger.info("Authenticated with session_id: %s...", self._session_id[:8])
 
+    async def reconnect(
+        self,
+        auth_params: Optional[dict[str, str]] = None,
+        login_tool: Optional[str] = None,
+    ) -> None:
+        """Re-authenticate on an existing connection (e.g. after session expiry).
+
+        Calls the login tool again without tearing down the SSE transport.
+        """
+        if not self._connected or not self._session:
+            raise ConnectionError("Cannot reconnect — not connected. Call connect() first.")
+
+        self._session_id = None  # Clear stale session
+
+        if login_tool and auth_params:
+            result = await self.call_tool(login_tool, auth_params)
+            if isinstance(result, dict) and "session_id" in result:
+                self._session_id = result["session_id"]
+                logger.info("Re-authenticated with session_id: %s...", self._session_id[:8])
+
     async def disconnect(self, logout_tool: Optional[str] = None) -> None:
         """Disconnect from the MCP server.
 

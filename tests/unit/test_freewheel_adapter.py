@@ -3,12 +3,17 @@
 
 """Tests for FreeWheel ad server adapter."""
 
+from types import SimpleNamespace
 from unittest.mock import AsyncMock
 
 import pytest
 
 from ad_seller.clients.ad_server_base import AdServerType
-from ad_seller.clients.freewheel_adapter import FreeWheelAdServerClient
+from ad_seller.clients.freewheel_adapter import (
+    FreeWheelAdServerClient,
+    _build_bc_auth_params,
+    _build_sh_auth_params,
+)
 
 
 @pytest.fixture
@@ -71,7 +76,9 @@ class TestListInventory:
 
         items = await adapter.list_inventory()
 
-        adapter._sh_client.call_tool.assert_called_once_with("list_inventory", {})
+        adapter._sh_client.call_tool.assert_called_once_with(
+            "list_inventory", {"limit": 100, "type": "template_deals"}
+        )
         assert len(items) == 2
         assert items[0].id == "pkg-1"
         assert items[0].ad_server_type == AdServerType.FREEWHEEL
@@ -92,7 +99,9 @@ class TestListInventory:
         adapter._sh_client.call_tool = AsyncMock(return_value=[])
 
         await adapter.list_inventory(limit=50)
-        adapter._sh_client.call_tool.assert_called_once_with("list_inventory", {"limit": 50})
+        adapter._sh_client.call_tool.assert_called_once_with(
+            "list_inventory", {"limit": 50, "type": "template_deals"}
+        )
 
 
 class TestListAudienceSegments:
@@ -178,3 +187,119 @@ class TestUpdateDeal:
         deal = await adapter.update_deal("IAB-ABC123", {"status": "PAUSED"})
         adapter._sh_client.call_tool.assert_called_once()
         assert deal.deal_id == "IAB-ABC123"
+
+
+class TestBuildSHAuthParams:
+    """Streaming Hub auth uses OAuth 2.0 ROPCG (username/password/network_id)."""
+
+    def test_all_fields_present(self):
+        settings = SimpleNamespace(
+            freewheel_sh_username="pub-user",
+            freewheel_sh_password="pub-pass",
+            freewheel_network_id="net-123",
+        )
+        params = _build_sh_auth_params(settings)
+        assert params == {
+            "username": "pub-user",
+            "password": "pub-pass",
+            "network_id": "net-123",
+        }
+
+    def test_missing_optional_fields(self):
+        settings = SimpleNamespace(
+            freewheel_sh_username="pub-user",
+            freewheel_sh_password="pub-pass",
+        )
+        params = _build_sh_auth_params(settings)
+        assert "network_id" not in params
+        assert params["username"] == "pub-user"
+
+    def test_empty_credentials(self):
+        settings = SimpleNamespace(
+            freewheel_sh_username=None,
+            freewheel_sh_password=None,
+        )
+        params = _build_sh_auth_params(settings)
+        assert params == {}
+
+
+class TestBuildBCAuthParams:
+    """Buyer Cloud auth uses Beeswax session cookie (email/password/buzz_key)."""
+
+    def test_all_fields_present(self):
+        settings = SimpleNamespace(
+            freewheel_bc_email="user@example.com",
+            freewheel_bc_password="bc-pass",
+            freewheel_bc_buzz_key="my-buzz",
+        )
+        params = _build_bc_auth_params(settings)
+        assert params["email"] == "user@example.com"
+        assert params["password"] == "bc-pass"
+        assert params["buzz_key"] == "my-buzz"
+        assert params["keep_logged_in"] == "true"
+
+    def test_keep_logged_in_always_set(self):
+        settings = SimpleNamespace(
+            freewheel_bc_email=None,
+            freewheel_bc_password=None,
+            freewheel_bc_buzz_key=None,
+        )
+        params = _build_bc_auth_params(settings)
+        assert params["keep_logged_in"] == "true"
+
+    def test_empty_credentials(self):
+        settings = SimpleNamespace(
+            freewheel_bc_email=None,
+            freewheel_bc_password=None,
+            freewheel_bc_buzz_key=None,
+        )
+        params = _build_bc_auth_params(settings)
+        assert "email" not in params
+        assert "password" not in params
+        assert "buzz_key" not in params
+
+
+class TestReconnect:
+    """Auto-reconnect re-authenticates without tearing down SSE transport."""
+
+    @pytest.mark.asyncio
+    async def test_reconnect_sh_calls_login(self, adapter):
+        adapter._settings = SimpleNamespace(
+            freewheel_sh_username="pub-user",
+            freewheel_sh_password="pub-pass",
+            freewheel_network_id="net-123",
+        )
+        adapter._sh_client.reconnect = AsyncMock()
+
+        await adapter._reconnect_sh()
+
+        adapter._sh_client.reconnect.assert_called_once_with(
+            auth_params={"username": "pub-user", "password": "pub-pass", "network_id": "net-123"},
+            login_tool="streaming_hub_login",
+        )
+
+    @pytest.mark.asyncio
+    async def test_reconnect_bc_calls_login(self, adapter):
+        adapter._settings = SimpleNamespace(
+            freewheel_bc_email="user@example.com",
+            freewheel_bc_password="bc-pass",
+            freewheel_bc_buzz_key="my-buzz",
+        )
+        adapter._bc_client = AsyncMock()
+
+        await adapter._reconnect_bc()
+
+        adapter._bc_client.reconnect.assert_called_once_with(
+            auth_params={
+                "email": "user@example.com",
+                "password": "bc-pass",
+                "buzz_key": "my-buzz",
+                "keep_logged_in": "true",
+            },
+            login_tool="buyer_cloud_login",
+        )
+
+    @pytest.mark.asyncio
+    async def test_reconnect_bc_noop_without_client(self, adapter):
+        adapter._bc_client = None
+        await adapter._reconnect_bc()  # Should not raise

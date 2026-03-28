@@ -72,15 +72,19 @@ The Streaming Hub MCP URL is unreachable.
 
 **Error: `FreeWheel BC MCP: 401 Unauthorized`**
 
-OAuth credentials for Buyer Cloud are invalid or expired.
+Beeswax session credentials for Buyer Cloud are invalid or expired.
 
-1. Verify `FREEWHEEL_BC_CLIENT_ID` and `FREEWHEEL_BC_CLIENT_SECRET` are correct.
-2. If using session auth, check `FREEWHEEL_BC_EMAIL` and `FREEWHEEL_BC_PASSWORD`.
-3. Token caching: restart the seller agent to force a new token exchange.
+1. Verify `FREEWHEEL_BC_EMAIL` and `FREEWHEEL_BC_PASSWORD` are correct.
+2. Verify `FREEWHEEL_BC_BUZZ_KEY` matches your Beeswax account (it determines the API hostname: `https://<buzz_key>.api.beeswax.com`).
+3. Sessions last 100 hours (30 days with `keep_logged_in`). The adapter requests extended sessions automatically. If issues persist, restart the seller agent to force a fresh login.
 
-**Error: `FreeWheel: Phase 3 PG Cross-MCP operation blocked`**
+**Error: `FreeWheel SH MCP: 401 Unauthorized` or `session expired`**
 
-Phase 3 (Programmatic Guaranteed cross-MCP) is not yet implemented. This is expected behavior. See `FREEWHEEL_MCP_TOOL_PROPOSAL.md` for status.
+Streaming Hub OAuth token has expired or credentials are invalid.
+
+1. Verify `FREEWHEEL_SH_USERNAME` and `FREEWHEEL_SH_PASSWORD` are correct.
+2. SH tokens are valid for 7 days. The adapter will auto-reconnect on expiry.
+3. Rate limit on the token endpoint is 3 req/s — avoid rapid restarts.
 
 ---
 

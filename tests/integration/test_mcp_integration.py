@@ -130,15 +130,7 @@ class TestListProductsIntegration:
 
         mock_flow_cls = MagicMock(return_value=mock_flow_instance)
 
-        with patch("ad_seller.interfaces.mcp_server.ProductSetupFlow", mock_flow_cls, create=True), patch.dict(
-            "sys.modules",
-            {"ad_seller.flows": MagicMock(ProductSetupFlow=mock_flow_cls)},
-        ):
-            # Re-import to pick up the mock
-
-            # Directly call with our mocked flow
-            # We need to patch at the point of import inside list_products
-
+        with patch("ad_seller.interfaces.mcp_server.ProductSetupFlow", mock_flow_cls, create=True):
             async def patched_list_products(limit=50):
                 flow = mock_flow_instance
                 await flow.kickoff()

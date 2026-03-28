@@ -86,17 +86,17 @@ class Settings(BaseSettings):
     #   "deals_only" — agent only sees pre-configured deals the publisher set up
     #                   for agentic selling in FreeWheel (template deals / packages)
     freewheel_inventory_mode: str = "deals_only"  # full, deals_only
-    # Streaming Hub MCP (publisher-side: inventory, deals, audiences)
+    # Streaming Hub MCP — publisher-side (inventory, deals, audiences)
+    # Auth: OAuth 2.0 ROPCG via streaming_hub_login tool (7-day token TTL)
     freewheel_sh_mcp_url: Optional[str] = None  # e.g. https://shmcp.freewheel.com
-    freewheel_sh_username: Optional[str] = None  # TODO(freewheel-auth): confirm auth mechanism
-    freewheel_sh_password: Optional[str] = None
-    # Buyer Cloud MCP (demand-side: campaign execution, creatives, reporting)
-    freewheel_bc_mcp_url: Optional[str] = None  # e.g. https://bcmcp.freewheel.com
-    freewheel_bc_client_id: Optional[str] = None  # OAuth 2.0
-    freewheel_bc_client_secret: Optional[str] = None
-    freewheel_bc_email: Optional[str] = None  # Session auth
-    freewheel_bc_password: Optional[str] = None
-    freewheel_bc_buzz_key: Optional[str] = None
+    freewheel_sh_username: Optional[str] = None  # SH publisher account username
+    freewheel_sh_password: Optional[str] = None  # SH publisher account password
+    # Buyer Cloud MCP — demand-side (campaign execution, creatives, reporting)
+    # Auth: Beeswax session cookie via buyer_cloud_login tool (100h / 30-day TTL)
+    freewheel_bc_mcp_url: Optional[str] = None  # e.g. https://<buzz_key>.api.beeswax.com
+    freewheel_bc_email: Optional[str] = None  # Beeswax account email
+    freewheel_bc_password: Optional[str] = None  # Beeswax account password
+    freewheel_bc_buzz_key: Optional[str] = None  # Buzz API key (determines API hostname)
 
     # SSP Connectors (publishers can configure multiple SSPs)
     # Comma-separated list of SSP names to enable

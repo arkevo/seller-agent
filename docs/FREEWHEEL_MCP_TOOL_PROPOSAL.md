@@ -1,7 +1,7 @@
-> **Implementation Status (2026-03-26):**
+> **Implementation Status (2026-03-27):**
 > - Phase 1 (Read-Only): ✅ Complete
-> - Phase 2 (PD/PA Deal Booking): ✅ Complete (with auth stubs)
-> - Phase 3 (PG Cross-MCP): ⏳ Blocked — awaiting FreeWheel auth mechanism (seller-91t)
+> - Phase 2 (PD/PA Deal Booking): ✅ Complete
+> - Phase 3 (PG Cross-MCP): ✅ Auth implemented — SH (OAuth 2.0 ROPCG) + BC (Beeswax session cookie)
 > - See `.beads/PROGRESS.md` for current status
 
 # FreeWheel Dual-MCP Integration — Seller Agent Architecture & Tool Requirements
@@ -177,7 +177,7 @@ The Streaming Hub MCP (`shmcp.freewheel.com`) is the publisher-side ad server. T
 | `streaming_hub_login` | Establish session | Returns `session_id` injected into all subsequent calls |
 | `streaming_hub_logout` | End session | Called on disconnect |
 
-**Seller agent auth flow:** On `connect()`, the adapter calls `streaming_hub_login` with configured username/password. The returned `session_id` is stored and passed to all subsequent SH tool calls.
+**Seller agent auth flow:** On `connect()`, the adapter calls `streaming_hub_login` with configured username/password (OAuth 2.0 ROPCG via `https://api.freewheel.tv/auth/token`). The returned `session_id` is stored and injected into all subsequent SH tool calls. Tokens are valid for 7 days; the adapter auto-reconnects on session expiry.
 
 ### 1.2 Inventory Discovery
 

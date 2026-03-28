@@ -32,7 +32,9 @@ def _get_deal_request_flow_class():
     # as a stub so that find_spec / relative imports work, without
     # executing the __init__.py that pulls in the broken module.
     parent_name = "ad_seller.flows"
-    if parent_name not in sys.modules:
+    original_parent = sys.modules.get(parent_name)
+    installed_stub = False
+    if original_parent is None:
         import types
 
         import ad_seller  # noqa: F401
@@ -43,6 +45,7 @@ def _get_deal_request_flow_class():
         ]
         stub.__package__ = parent_name
         sys.modules[parent_name] = stub
+        installed_stub = True
 
     spec = importlib.util.find_spec(mod_name)
     if spec is None:
@@ -50,6 +53,12 @@ def _get_deal_request_flow_class():
     mod = importlib.util.module_from_spec(spec)
     sys.modules[mod_name] = mod
     spec.loader.exec_module(mod)
+
+    # Remove the stub so other tests that import ad_seller.flows get the real
+    # module (with ProductSetupFlow etc.) instead of a bare stub.
+    if installed_stub:
+        del sys.modules[parent_name]
+
     return mod.DealRequestFlow
 
 
